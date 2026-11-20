@@ -11,10 +11,22 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-inter), var(--font-noto-devanagari), system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-width: 320px;
+  }
+
+  /* Accessibility: WCAG 2.2 (2.4.11) Focus Not Obscured */
+  :target,
+  [tabindex="-1"],
+  section,
+  article,
+  button,
+  input,
+  select {
+    scroll-margin-top: 5.5rem;
   }
 
   /* Accessibility: Visible Focus Rings */

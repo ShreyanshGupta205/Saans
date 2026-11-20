@@ -189,6 +189,22 @@ export function TodayDashboard({
             </span>
           </div>
         </div>
+
+        {/* Plain Language Jargon Guide (WCAG 2.2 Plain Language Requirement) */}
+        <div className="mt-4 pt-4 border-t border-zinc-800/80 text-xs text-zinc-400 grid sm:grid-cols-2 gap-3 leading-relaxed">
+          <p>
+            <strong className="text-zinc-200">AQI (Air Quality Index):</strong>{' '}
+            {isHindi
+              ? 'हवा की गुणवत्ता का 0 से 500 का पैमाना। संख्या जितनी अधिक होगी, स्वास्थ्य जोखिम उतना ही गंभीर होगा।'
+              : 'A 0–500 score showing air cleanliness. Higher numbers indicate greater health danger.'}
+          </p>
+          <p>
+            <strong className="text-zinc-200">PM2.5 (Fine Soot):</strong>{' '}
+            {isHindi
+              ? 'बाल से 30 गुना बारीक जहरीले धूल कण जो सांस के जरिए सीधे फेफड़ों और खून में पहुंच जाते हैं।'
+              : 'Microscopic toxic particles 30x thinner than hair that penetrate deep into lungs and blood.'}
+          </p>
+        </div>
       </div>
 
       {/* Best Outdoor Window Recommendation Card */}

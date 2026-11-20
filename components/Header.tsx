@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Wind, Globe, Settings, Volume2, VolumeX } from 'lucide-react';
+import Link from 'next/link';
+import { Wind, Globe, Settings, Volume2, VolumeX, BookOpen, Info } from 'lucide-react';
 import { SupportedLanguage } from '@/i18n';
 
 interface HeaderProps {
@@ -61,6 +62,28 @@ export function Header({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Sources Link */}
+          <Link
+            href="/sources"
+            className="p-2 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[44px] min-w-[44px] flex items-center justify-center gap-1"
+            title="Scientific citations & impact sources"
+            aria-label="View data sources and scientific citations"
+          >
+            <BookOpen className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+            <span className="hidden lg:inline">{isHi ? 'स्रोत' : 'Sources'}</span>
+          </Link>
+
+          {/* About Link */}
+          <Link
+            href="/about"
+            className="p-2 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[44px] min-w-[44px] flex items-center justify-center gap-1"
+            title="About Saans and Health Advisory"
+            aria-label="About Saans and Health Advisory"
+          >
+            <Info className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+            <span className="hidden lg:inline">{isHi ? 'परिचय' : 'About'}</span>
+          </Link>
+
           {/* Read Aloud Button */}
           <button
             onClick={onToggleReadAloud}
