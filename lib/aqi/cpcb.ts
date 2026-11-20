@@ -217,6 +217,26 @@ export function getAQICategory(aqi: number): AQICategory {
 }
 
 /**
+ * Builds an empty/fallback AQI result when no pollutant readings are provided.
+ */
+function buildEmptyAQIResult(): ComputedAQIResult {
+  const cat = getAQICategory(0);
+  const meta = AQI_CATEGORY_METADATA[cat];
+  return {
+    aqi: 0,
+    dominantPollutant: 'pm25',
+    category: cat,
+    categoryHi: meta.categoryHi,
+    healthAdvisoryEn: meta.healthAdvisoryEn,
+    healthAdvisoryHi: meta.healthAdvisoryHi,
+    pollutantBreakdown: {},
+    whoMultiples: {},
+    timestamp: new Date().toISOString(),
+    isEmergency: false,
+  };
+}
+
+/**
  * Computes the overall Indian NAQI from a dictionary of pollutant concentrations.
  * Per CPCB methodology:
  *   Overall AQI = Max(Sub-index_i)
@@ -233,21 +253,17 @@ export function computeIndianAQI(
   let dominant: PollutantKey = 'pm25';
 
   const keys = Object.keys(concentrations) as PollutantKey[];
-
   for (const key of keys) {
     const conc = concentrations[key];
     if (conc !== undefined && conc >= 0) {
       const subIndex = calculateSubIndex(key, conc);
-      const category = getAQICategory(subIndex);
       const whoMult = calculateWhoMultiple(key, conc);
-
       breakdown[key] = {
         concentration: conc,
         subIndex,
-        category,
+        category: getAQICategory(subIndex),
         ...(whoMult !== undefined ? { whoMultiple: whoMult } : {}),
       };
-
       if (subIndex > maxSubIndex) {
         maxSubIndex = subIndex;
         dominant = key;
@@ -255,27 +271,12 @@ export function computeIndianAQI(
     }
   }
 
-  // Fallback if no pollutants provided
   if (maxSubIndex === 0 && !breakdown.pm25) {
-    const cat = getAQICategory(0);
-    const meta = AQI_CATEGORY_METADATA[cat];
-    return {
-      aqi: 0,
-      dominantPollutant: 'pm25',
-      category: cat,
-      categoryHi: meta.categoryHi,
-      healthAdvisoryEn: meta.healthAdvisoryEn,
-      healthAdvisoryHi: meta.healthAdvisoryHi,
-      pollutantBreakdown: breakdown,
-      whoMultiples: {},
-      timestamp: new Date().toISOString(),
-      isEmergency: false,
-    };
+    return buildEmptyAQIResult();
   }
 
   const category = getAQICategory(maxSubIndex);
   const metadata = AQI_CATEGORY_METADATA[category];
-
   return {
     aqi: maxSubIndex,
     dominantPollutant: dominant,
