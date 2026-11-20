@@ -47,59 +47,53 @@ export const COOKING_EMISSION_FACTORS: Record<CookingFuel, { dailyKgCO2: number;
   biomass: { dailyKgCO2: 4.80, dailyGramsPM25: 37.0 },
 };
 
+function calcCommuteShiftSavings(profile: HouseholdProfile, factor: VehicleFactor): { co2Kg: number; pm25Grams: number } {
+  if (!['car_petrol', 'car_diesel', 'two_wheeler'].includes(profile.commuteMode)) {
+    return { co2Kg: 0, pm25Grams: 0 };
+  }
+  const metro = COMMUTE_EMISSION_FACTORS.metro;
+  const co2SavedPerKm = (factor.gCO2PerKm - metro.gCO2PerKm) / 1000;
+  const pmSavedPerKm = factor.gPM25PerKm - metro.gPM25PerKm;
+  const monthlyShiftKm = profile.commuteDistanceKm * 2 * 8;
+  return {
+    co2Kg: monthlyShiftKm * co2SavedPerKm,
+    pm25Grams: monthlyShiftKm * pmSavedPerKm,
+  };
+}
+
+function calcCookingFuelSavings(fuel: CookingFuel): { co2Kg: number; pm25Grams: number } {
+  const cooking = COOKING_EMISSION_FACTORS[fuel];
+  if (fuel === 'biomass') {
+    return { co2Kg: (cooking.dailyKgCO2 - 0.42) * 30, pm25Grams: cooking.dailyGramsPM25 * 30 };
+  }
+  if (fuel === 'lpg') {
+    return { co2Kg: (0.82 - 0.42) * 30, pm25Grams: 0.16 * 30 };
+  }
+  return { co2Kg: 0, pm25Grams: 0 };
+}
+
 /**
  * Computes household direct emissions and potential reductions from sustainable alternatives.
- *
- * @param profile Household profile
- * @returns HouseholdEmissionsAssessment
  */
 export function calculateHouseholdEmissions(profile: HouseholdProfile): HouseholdEmissionsAssessment {
   const roundTripKm = profile.commuteDistanceKm * 2;
   const inOfficeDaysPerWeek = Math.max(0, 7 - profile.workFromHomeDays);
   const factor = COMMUTE_EMISSION_FACTORS[profile.commuteMode];
 
-  // Daily average commute emissions across the 7-day week
   const dailyKmAverage = (roundTripKm * inOfficeDaysPerWeek) / 7;
   const dailyCommuteKgCO2 = (dailyKmAverage * factor.gCO2PerKm) / 1000;
   const dailyCommuteGramsPM25 = dailyKmAverage * factor.gPM25PerKm;
 
-  // Cooking emissions
-  const cooking = COOKING_EMISSION_FACTORS[profile.cookingFuel];
-
-  // Sustainable alternative potentials:
-  // 1. Shifting 2 days of motorized car/2-wheeler commute to Metro or WFH
-  // 2. Switching to Induction or clean cooking
-  let monthlyCO2ReductionKg = 0;
-  let monthlyPM25ReductionGrams = 0;
-
-  // If currently using private ICE car or two wheeler
-  if (['car_petrol', 'car_diesel', 'two_wheeler'].includes(profile.commuteMode)) {
-    const metroFactor = COMMUTE_EMISSION_FACTORS.metro;
-    const co2SavedPerKm = (factor.gCO2PerKm - metroFactor.gCO2PerKm) / 1000;
-    const pmSavedPerKm = factor.gPM25PerKm - metroFactor.gPM25PerKm;
-
-    // Shift 2 days per week to Metro (or additional WFH) = 8 days per month
-    const monthlyShiftKm = roundTripKm * 8;
-    monthlyCO2ReductionKg += monthlyShiftKm * co2SavedPerKm;
-    monthlyPM25ReductionGrams += monthlyShiftKm * pmSavedPerKm;
-  }
-
-  // Cooking fuel switch
-  if (profile.cookingFuel === 'biomass') {
-    // Huge reduction shifting biomass to induction/LPG
-    monthlyCO2ReductionKg += (cooking.dailyKgCO2 - 0.42) * 30;
-    monthlyPM25ReductionGrams += (cooking.dailyGramsPM25 - 0.0) * 30;
-  } else if (profile.cookingFuel === 'lpg') {
-    // LPG to induction saves ~0.40 kg CO2/day and zero indoor NO2/combustion particles
-    monthlyCO2ReductionKg += (0.82 - 0.42) * 30;
-    monthlyPM25ReductionGrams += (0.16 - 0.0) * 30;
-  }
+  const commuteSavings = calcCommuteShiftSavings(profile, factor);
+  const cookingSavings = calcCookingFuelSavings(profile.cookingFuel);
+  const totalCO2Red = commuteSavings.co2Kg + cookingSavings.co2Kg;
+  const totalPM25Red = commuteSavings.pm25Grams + cookingSavings.pm25Grams;
 
   return {
     dailyCommuteKgCO2: Math.round(dailyCommuteKgCO2 * 100) / 100,
     dailyCommuteGramsPM25: Math.round(dailyCommuteGramsPM25 * 1000) / 1000,
-    dailyCookingKgCO2: cooking.dailyKgCO2,
-    potentialMonthlyKgCO2Reduction: Math.max(0, Math.round(monthlyCO2ReductionKg * 10) / 10),
-    potentialMonthlyGramsPM25Reduction: Math.max(0, Math.round(monthlyPM25ReductionGrams * 10) / 10),
+    dailyCookingKgCO2: COOKING_EMISSION_FACTORS[profile.cookingFuel].dailyKgCO2,
+    potentialMonthlyKgCO2Reduction: Math.max(0, Math.round(totalCO2Red * 10) / 10),
+    potentialMonthlyGramsPM25Reduction: Math.max(0, Math.round(totalPM25Red * 10) / 10),
   };
 }

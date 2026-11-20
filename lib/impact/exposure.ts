@@ -43,6 +43,30 @@ export function getInfiltrationParams(homeType: HomeType): InfiltrationParameter
   }
 }
 
+function calcBaselineDailyUg(
+  cAmbient: number,
+  currentInfil: number,
+  transitHours: number,
+  indoorAwakeHours: number
+): number {
+  const sleepIntake = cAmbient * currentInfil * 8 * 0.45;
+  const indoorIntake = cAmbient * currentInfil * indoorAwakeHours * 0.70;
+  const transitIntake = cAmbient * (1 - 0.20) * transitHours * 1.60;
+  return sleepIntake + indoorIntake + transitIntake;
+}
+
+function calcOptimizedDailyUg(
+  cAmbient: number,
+  optimizedInfil: number,
+  transitHours: number,
+  indoorAwakeHours: number
+): number {
+  const optSleepIntake = cAmbient * optimizedInfil * 8 * 0.45;
+  const optIndoorIntake = cAmbient * optimizedInfil * indoorAwakeHours * 0.70;
+  const optTransitIntake = cAmbient * (1 - 0.95) * transitHours * 1.60;
+  return optSleepIntake + optIndoorIntake + optTransitIntake;
+}
+
 /**
  * Calculates daily inhaled particulate matter (micrograms of PM2.5 per person per day)
  * comparing baseline habits against Saans recommended habits (N95 mask, air purification, shifted hours).
@@ -55,57 +79,23 @@ export function calculateHouseholdExposure(
   profile: HouseholdProfile,
   ambientPm25: number
 ): HouseholdExposureAssessment {
-  // Ensure non-negative ambient concentration
   const cAmbient = Math.max(0, ambientPm25);
   const infil = getInfiltrationParams(profile.homeType);
 
-  // Commute outdoor time (hours/day): distance / avg speed (20 km/h) * 2 ways
-  // On WFH days, commute outdoor time is 0
   const commuteDaysPerWeek = Math.max(0, 7 - profile.workFromHomeDays);
   const avgDailyCommuteKm = (profile.commuteDistanceKm * 2 * commuteDaysPerWeek) / 7;
   const transitHours = Math.min(3, Math.max(0.2, avgDailyCommuteKm / 20));
+  const indoorAwakeHours = Math.max(0, 24 - 8 - transitHours);
 
-  const sleepHours = 8;
-  const indoorAwakeHours = Math.max(0, 24 - sleepHours - transitHours);
-
-  // Breathing rates (m³/h)
-  const rateSleep = 0.45;
-  const rateIndoor = 0.70;
-  const rateTransit = 1.60;
-
-  // --- BASELINE EXPOSURE CALCULATION ---
-  // Infiltration factor without optimization
   const currentInfil = profile.hasAirPurifier ? infil.withPurifierInfiltration : infil.baselineInfiltration;
-  // Baseline assumption: No N95 mask used during transit (regular or cloth mask = 20% filtration)
-  const baselineTransitMaskEff = 0.20;
+  const baselineDailyInhaledUg = calcBaselineDailyUg(cAmbient, currentInfil, transitHours, indoorAwakeHours);
+  const optimizedDailyInhaledUg = calcOptimizedDailyUg(cAmbient, infil.withPurifierInfiltration, transitHours, indoorAwakeHours);
 
-  const baselineSleepIntake = cAmbient * currentInfil * sleepHours * rateSleep;
-  const baselineIndoorIntake = cAmbient * currentInfil * indoorAwakeHours * rateIndoor;
-  const baselineTransitIntake = cAmbient * (1 - baselineTransitMaskEff) * transitHours * rateTransit;
-
-  const baselineDailyInhaledUg = baselineSleepIntake + baselineIndoorIntake + baselineTransitIntake;
-
-  // --- OPTIMIZED EXPOSURE CALCULATION (Following Saans Plan) ---
-  // 1. Bedroom & living room purified with True HEPA (infil = withPurifierInfiltration)
-  // 2. Sealed doors/windows during inversion
-  // 3. Certified N95 mask worn during all outdoor commute (95% efficiency)
-  // 4. Shifted errands to afternoon clean window
-  const optimizedInfil = infil.withPurifierInfiltration;
-  const optimizedMaskEff = 0.95;
-
-  const optSleepIntake = cAmbient * optimizedInfil * sleepHours * rateSleep;
-  const optIndoorIntake = cAmbient * optimizedInfil * indoorAwakeHours * rateIndoor;
-  const optTransitIntake = cAmbient * (1 - optimizedMaskEff) * transitHours * rateTransit;
-
-  const optimizedDailyInhaledUg = optSleepIntake + optIndoorIntake + optTransitIntake;
-
-  // Exposure reduction percentage
   const reductionPct =
     baselineDailyInhaledUg > 0
       ? Math.round(((baselineDailyInhaledUg - optimizedDailyInhaledUg) / baselineDailyInhaledUg) * 100)
       : 0;
 
-  // Number of hours exposed to elevated (>100 µg/m³) indoor or outdoor air
   const highExposureHours = profile.hasAirPurifier ? transitHours : 24;
 
   return {
