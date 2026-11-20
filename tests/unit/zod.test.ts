@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AQIQuerySchema,
   ChatRequestSchema,
+  CommunityQuerySchema,
   GeocodeQuerySchema,
   HouseholdProfileSchema,
   LLMPlanResponseSchema,
@@ -161,5 +162,11 @@ describe('LLMPlanResponseSchema', () => {
 
     const parsed = LLMPlanResponseSchema.safeParse(validResponse);
     expect(parsed.success).toBe(true);
+  });
+
+  it('validates CommunityQuerySchema strictly with integer household count bounds', () => {
+    expect(CommunityQuerySchema.safeParse({ households: 50 }).success).toBe(true);
+    expect(CommunityQuerySchema.safeParse({ households: 0 }).success).toBe(false);
+    expect(CommunityQuerySchema.safeParse({ households: 20000 }).success).toBe(false);
   });
 });

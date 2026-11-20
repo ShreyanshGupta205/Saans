@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-export const CommuteModeSchema = z.enum([
+const CommuteModeSchema = z.enum([
   'metro',
   'bus',
   'car_petrol',
@@ -17,14 +17,14 @@ export const CommuteModeSchema = z.enum([
   'none',
 ]);
 
-export const HomeTypeSchema = z.enum([
+const HomeTypeSchema = z.enum([
   'apartment_highrise',
   'apartment_lowrise',
   'independent_house',
   'semi_pucca',
 ]);
 
-export const CookingFuelSchema = z.enum([
+const CookingFuelSchema = z.enum([
   'lpg',
   'png',
   'electric_induction',
@@ -50,12 +50,10 @@ export const HouseholdProfileSchema = z
   })
   .strict();
 
-export type HouseholdProfileInput = z.infer<typeof HouseholdProfileSchema>;
-
 /**
  * Schema for Gemini structured JSON plan generation
  */
-export const LLMActionRecommendationSchema = z.object({
+const LLMActionRecommendationSchema = z.object({
   id: z.string(),
   section: z.enum(['routine', 'indoor', 'sustainable']),
   timeOfDay: z.enum(['morning', 'day', 'evening']).optional(),
@@ -77,7 +75,7 @@ export type LLMPlanResponse = z.infer<typeof LLMPlanResponseSchema>;
 /**
  * Chat request validation schema
  */
-export const ChatMessageSchema = z.object({
+const ChatMessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
   content: z.string().min(1).max(2000),
 });
@@ -91,8 +89,6 @@ export const ChatRequestSchema = z
     language: z.enum(['en', 'hi']).default('en'),
   })
   .strict();
-
-export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 
 /**
  * AQI API query params schema

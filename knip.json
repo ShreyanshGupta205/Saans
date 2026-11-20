@@ -1,9 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "app/**/{page,layout,loading,error,not-found,route}.{ts,tsx}",
-    "middleware.ts"
-  ],
   "project": [
     "app/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",
@@ -12,22 +8,6 @@
     "i18n/**/*.{ts,tsx}"
   ],
   "ignoreDependencies": [
-    "@axe-core/playwright",
-    "@playwright/test",
-    "@testing-library/*",
-    "@types/*",
-    "autoprefixer",
-    "eslint*",
-    "postcss",
-    "tailwindcss",
-    "vitest*",
-    "@vitejs/*",
-    "@vitest/*",
-    "jsdom",
-    "msw",
-    "tsx",
-    "fast-check",
-    "dependency-cruiser",
-    "type-coverage"
+    "msw"
   ]
 }

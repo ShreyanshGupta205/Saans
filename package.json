@@ -21,10 +21,10 @@
   "dependencies": {
     "@google/genai": "^0.2.0",
     "lucide-react": "^0.460.0",
-    "next": "14.2.20",
+    "next": "^14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zod": "^3.23.8"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
@@ -36,13 +36,12 @@
     "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
-    "@upstash/redis": "^1.41.0",
     "@vitejs/plugin-react": "^4.3.3",
     "@vitest/coverage-v8": "^2.1.5",
     "autoprefixer": "^10.4.20",
     "dependency-cruiser": "^18.8.0",
     "eslint": "^8.57.1",
-    "eslint-config-next": "14.2.20",
+    "eslint-config-next": "^14.2.35",
     "eslint-plugin-security": "^2.1.0",
     "eslint-plugin-sonarjs": "^0.24.0",
     "fast-check": "^4.10.3",

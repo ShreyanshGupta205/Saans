@@ -40,7 +40,7 @@ export const COMMUTE_EMISSION_FACTORS: Record<CommuteMode, VehicleFactor> = {
   none: { gCO2PerKm: 0.0, gPM25PerKm: 0.0 },
 };
 
-export const COOKING_EMISSION_FACTORS: Record<CookingFuel, { dailyKgCO2: number; dailyGramsPM25: number }> = {
+const COOKING_EMISSION_FACTORS: Record<CookingFuel, { dailyKgCO2: number; dailyGramsPM25: number }> = {
   lpg: { dailyKgCO2: 0.82, dailyGramsPM25: 0.16 },
   png: { dailyKgCO2: 0.74, dailyGramsPM25: 0.12 },
   electric_induction: { dailyKgCO2: 0.42, dailyGramsPM25: 0.0 },

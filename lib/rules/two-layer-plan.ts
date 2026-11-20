@@ -102,7 +102,7 @@ function buildCardImpact(factorKey: keyof typeof IMPACT_FACTORS, numbers: PlanNu
 /**
  * Combines the deterministic Numbers Layer with the Narrative Layer into complete Action Cards.
  */
-export function combinePlanLayers(
+function combinePlanLayers(
   numbers: PlanNumbersLayer,
   narrative: PlanNarrativeLayer,
   section: 'routine' | 'indoor' | 'sustainable',

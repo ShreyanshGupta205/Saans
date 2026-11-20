@@ -39,7 +39,7 @@ export interface HouseholdProfile {
   readonly language: 'en' | 'hi';
 }
 
-export interface ImpactMetric {
+interface ImpactMetric {
   readonly value: string; // e.g. "65% - 80%", "450 g CO2e / day"
   readonly minVal: number;
   readonly maxVal: number;
@@ -56,9 +56,9 @@ export interface ActionCardImpact {
   readonly communityMultiplier: ImpactMetric;
 }
 
-export type EffortLevel = 'Low' | 'Medium' | 'High';
-export type CostBandINR = '₹0' | '₹100 - ₹500' | '₹500 - ₹2,000' | '₹2,000+';
-export type ActionSection = 'routine' | 'indoor' | 'sustainable';
+type EffortLevel = 'Low' | 'Medium' | 'High';
+type CostBandINR = '₹0' | '₹100 - ₹500' | '₹500 - ₹2,000' | '₹2,000+';
+type ActionSection = 'routine' | 'indoor' | 'sustainable';
 
 export interface ActionCardData {
   readonly id: string;

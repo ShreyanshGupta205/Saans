@@ -13,13 +13,15 @@ import { env } from '../../lib/env';
 import { buildChatPrompt, buildPlanUserPrompt } from '../../lib/llm/prompt';
 import { clearPlanCache, getOrGeneratePlan } from '../../lib/llm/service';
 import { clearDataCaches, fetchOpenMeteoAirQuality, searchOpenMeteoLocations } from '../../lib/data/open-meteo';
-import { SlidingWindowRateLimiter, UpstashRedisRateLimiter } from '../../lib/rate-limit/limiter';
+import { InMemoryRateLimiter, UpstashRedisRateLimiter } from '../../lib/rate-limit/limiter';
 import { HouseholdProfile } from '../../lib/impact/types';
 import { HourlyForecastItem } from '../../lib/aqi/types';
 import { calculateHouseholdExposure } from '../../lib/impact/exposure';
 import { calculateHouseholdEmissions } from '../../lib/impact/emissions';
 import { getProfileArchetype, ALL_PROFILE_ARCHETYPES } from '../../lib/impact/archetypes';
 import { validateLLMOutputSafety } from '../../lib/llm/guard';
+import { getDictionary } from '../../i18n';
+import { CEA_INDIA_GRID_EMISSION_FACTOR_KG_PER_KWH } from '../../data/impact-factors';
 import * as clientModule from '../../lib/llm/client';
 
 const testProfile: HouseholdProfile = {
@@ -307,7 +309,7 @@ describe('LLM Service Edge & Cache Hit Branches', () => {
 
 describe('Rate Limiter Cache Pruning & Reset', () => {
   it('resets store properly', () => {
-    const limiter = new SlidingWindowRateLimiter(10, 60_000);
+    const limiter = new InMemoryRateLimiter(10, 60_000);
     limiter.check('ip1');
     limiter.reset();
     const res = limiter.check('ip1');
@@ -315,7 +317,7 @@ describe('Rate Limiter Cache Pruning & Reset', () => {
   });
 
   it('prunes expired entries when store size exceeds 5000', () => {
-    const limiter = new SlidingWindowRateLimiter(10, 1000);
+    const limiter = new InMemoryRateLimiter(10, 1000);
     const now = 100000;
     // Insert expired records
     for (let i = 0; i < 5005; i++) {
@@ -491,5 +493,11 @@ describe('12 Profile Archetypes & Remaining Edge Branches', () => {
   it('validates empty or whitespace strings as unsafe in validateLLMOutputSafety', () => {
     expect(validateLLMOutputSafety('')).toBe(false);
     expect(validateLLMOutputSafety('   ')).toBe(false);
+  });
+
+  it('covers getDictionary and CEA factor constants', () => {
+    expect(getDictionary('en').app.name).toBe('Saans');
+    expect(getDictionary('hi').app.name).toBe('साँस');
+    expect(CEA_INDIA_GRID_EMISSION_FACTOR_KG_PER_KWH).toBe(0.716);
   });
 });

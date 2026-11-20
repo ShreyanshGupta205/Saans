@@ -135,7 +135,7 @@ const SUSTAINABLE_NARRATIVES: readonly CardNarrative[] = [
   },
 ];
 
-export const DEFAULT_FALLBACK_NARRATIVE: PlanNarrativeLayer = {
+const DEFAULT_FALLBACK_NARRATIVE: PlanNarrativeLayer = {
   cacheKey: 'default_fallback',
   summaryEn: 'Tailored clean air plan based on calibrated environmental models.',
   summaryHi: 'पर्यावरण नियमों पर आधारित व्यक्तिगत स्वच्छ वायु कार्य योजना।',

@@ -4,11 +4,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { SlidingWindowRateLimiter } from '../../lib/rate-limit/limiter';
+import { InMemoryRateLimiter } from '../../lib/rate-limit/limiter';
 
-describe('SlidingWindowRateLimiter', () => {
+describe('InMemoryRateLimiter', () => {
   it('allows requests within the configured rate limit', () => {
-    const limiter = new SlidingWindowRateLimiter(5, 60_000); // 5 requests per minute
+    const limiter = new InMemoryRateLimiter(5, 60_000); // 5 requests per minute
     const ip = '192.168.1.1';
     const now = 1000000;
 
@@ -20,7 +20,7 @@ describe('SlidingWindowRateLimiter', () => {
   });
 
   it('rejects requests exceeding the rate limit and provides retryAfterSeconds', () => {
-    const limiter = new SlidingWindowRateLimiter(3, 60_000);
+    const limiter = new InMemoryRateLimiter(3, 60_000);
     const ip = '192.168.1.2';
     const now = 1000000;
 
@@ -35,7 +35,7 @@ describe('SlidingWindowRateLimiter', () => {
   });
 
   it('resets quota after window expiration', () => {
-    const limiter = new SlidingWindowRateLimiter(2, 60_000);
+    const limiter = new InMemoryRateLimiter(2, 60_000);
     const ip = '192.168.1.3';
     const t0 = 1000000;
 

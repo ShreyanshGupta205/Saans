@@ -93,9 +93,6 @@ export class InMemoryRateLimiter implements RateLimiter {
   }
 }
 
-// Backward compatibility alias
-export const SlidingWindowRateLimiter = InMemoryRateLimiter;
-
 async function fetchUpstashCount(
   url: string,
   token: string,
