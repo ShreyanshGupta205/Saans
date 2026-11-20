@@ -40,7 +40,7 @@
     "@vitest/coverage-v8": "^2.1.5",
     "autoprefixer": "^10.4.20",
     "dependency-cruiser": "^18.8.0",
-    "eslint": "^8.57.1",
+    "eslint": "^10.15.0",
     "eslint-config-next": "^14.2.35",
     "eslint-plugin-security": "^2.1.0",
     "eslint-plugin-sonarjs": "^0.24.0",
