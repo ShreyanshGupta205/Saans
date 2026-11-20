@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, RefreshCw, Clock, Home, Leaf, Shield } from 'lucide-react';
+import { Sparkles, RefreshCw, Clock, Home, Leaf, Shield, AlertTriangle } from 'lucide-react';
 import { ActionCard } from './ActionCard';
+import { ChoiceImpactSection } from './ChoiceImpactSection';
 import { GeneratedPlanResult } from '@/lib/rules/fallback-plan';
+import { HouseholdProfile } from '@/lib/impact/types';
 
 interface PersonalisedPlanProps {
   readonly plan: GeneratedPlanResult;
   readonly onRefreshPlan: () => void;
   readonly isRefreshing?: boolean;
   readonly isHindi?: boolean;
+  readonly profile?: HouseholdProfile;
+  readonly ambientPm25?: number;
 }
 
 export function PersonalisedPlan({
@@ -17,6 +21,8 @@ export function PersonalisedPlan({
   onRefreshPlan,
   isRefreshing = false,
   isHindi = false,
+  profile,
+  ambientPm25 = 150,
 }: PersonalisedPlanProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'routine' | 'indoor' | 'sustainable'>('all');
 
@@ -48,6 +54,25 @@ export function PersonalisedPlan({
           <span>{isRefreshing ? (isHindi ? 'ताज़ा कर रहे हैं...' : 'Refreshing...') : (isHindi ? 'योजना ताज़ा करें' : 'Refresh Plan')}</span>
         </button>
       </div>
+
+      {/* Basic Mode Notice (if degraded or 8s LLM timeout) */}
+      {plan.isDegraded && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-amber-950/40 border border-amber-800/80 rounded-xl p-3.5 flex items-center justify-between text-xs text-amber-200"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
+            <span>
+              {isHindi
+                ? 'मूल नियम मोड: उच्च गति और 100% विश्वसनीयता के लिए योजना स्थानीय वैज्ञानिक गणनाओं द्वारा संचालित है।'
+                : 'Basic Rule Mode: Operating with deterministic science rules for instant response and 100% uptime.'}
+            </span>
+          </div>
+          <span className="font-semibold text-amber-300 ml-2 shrink-0">Basic Mode</span>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-zinc-800 pb-3" role="tablist">
@@ -153,6 +178,15 @@ export function PersonalisedPlan({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Your Choice, Your Impact Section (Before / After Comparison) */}
+      {profile && (
+        <ChoiceImpactSection
+          profile={profile}
+          ambientPm25={ambientPm25}
+          isHindi={isHindi}
+        />
       )}
 
       {/* Deterministic Data Assurance Footnote */}

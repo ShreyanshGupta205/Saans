@@ -115,6 +115,15 @@ export default function HomePage() {
   // Fetch or generate plan from internal /api/plan
   const loadPlanData = useCallback(
     async (prof: HouseholdProfile, aqiRes: ComputedAQIResult, lang: SupportedLanguage) => {
+      // 1. Instantly render the rule-based plan (<100ms)
+      const instantPlan = generateDeterministicPlan({
+        profile: prof,
+        aqi: aqiRes.aqi,
+        dominantPollutant: aqiRes.dominantPollutant,
+        isDegraded: false,
+      });
+      setPlan((prev) => (prev ? prev : instantPlan));
+
       setIsRefreshingPlan(true);
       try {
         const res = await fetch('/api/plan', {
@@ -311,6 +320,8 @@ export default function HomePage() {
             onRefreshPlan={() => loadPlanData(profile, aqiData, language)}
             isRefreshing={isRefreshingPlan}
             isHindi={isHindi}
+            profile={profile}
+            ambientPm25={aqiData.pollutantBreakdown.pm25?.concentration ?? 150}
           />
         )}
 
