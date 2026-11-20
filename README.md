@@ -2,7 +2,7 @@
 
 > Production-grade, GenAI-powered clean-air assistant and community smog mitigation platform designed for Indian urban families and Resident Welfare Associations (RWAs / societies), calibrated against Delhi-NCR winter smog conditions.
 
-[![CI Status](https://github.com/saans-org/saans/actions/workflows/ci.yml/badge.svg)](https://github.com/saans-org/saans/actions)
+[![CI Status](https://github.com/ShreyanshGupta205/Saans/actions/workflows/ci.yml/badge.svg)](https://github.com/ShreyanshGupta205/Saans/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](file:///c:/Users/Shreyansh%20Gupta/Desktop/Saans/LICENSE)
 [![WCAG 2.2 AA Compliant](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA%20Compliant-blue.svg)](file:///c:/Users/Shreyansh%20Gupta/Desktop/Saans/A11Y.md)
 [![TypeScript Strict](https://img.shields.io/badge/TypeScript-Strict%20(99.4%25%20type--coverage)-blue.svg)](package.json)
@@ -109,7 +109,7 @@ flowchart TD
 
 ### Installation
 ```bash
-git clone https://github.com/saans-org/saans.git
+git clone https://github.com/ShreyanshGupta205/Saans.git
 cd saans
 npm install
 ```
