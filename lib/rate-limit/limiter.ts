@@ -17,6 +17,7 @@ export interface RateLimitResult {
 
 export interface RateLimiter {
   check(key: string, now?: number): Promise<RateLimitResult> | RateLimitResult;
+  reset(key?: string): void;
 }
 
 interface WindowRecord {
@@ -77,6 +78,14 @@ export class InMemoryRateLimiter implements RateLimiter {
       remaining: this.limit - record.count,
       reset: Math.ceil(record.resetTime / 1000),
     };
+  }
+
+  public reset(key?: string): void {
+    if (key) {
+      this.store.delete(key);
+    } else {
+      this.store.clear();
+    }
   }
 
   public resetAll(): void {
@@ -151,9 +160,12 @@ export class UpstashRedisRateLimiter implements RateLimiter {
         reset: Math.ceil(resetTime / 1000),
       };
     } catch {
-      // Upstream network failure -> fail open with local in-memory fallback
       return this.fallback.check(key, now);
     }
+  }
+
+  public reset(key?: string): void {
+    this.fallback.reset(key);
   }
 }
 
@@ -172,3 +184,5 @@ export function createRateLimiter(limit?: number): RateLimiter {
   }
   return new InMemoryRateLimiter(maxReq, 60_000);
 }
+
+export const globalRateLimiter = createRateLimiter();

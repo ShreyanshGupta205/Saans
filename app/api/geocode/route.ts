@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     request.headers.get('x-real-ip') ||
     '127.0.0.1';
 
-  const rateCheck = globalRateLimiter.check(clientIp);
+  const rateCheck = await globalRateLimiter.check(clientIp);
   if (!rateCheck.success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Please wait before retrying.' },

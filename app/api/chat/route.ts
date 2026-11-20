@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     request.headers.get('x-real-ip') ||
     '127.0.0.1';
 
-  const rateCheck = globalRateLimiter.check(clientIp);
+  const rateCheck = await globalRateLimiter.check(clientIp);
   if (!rateCheck.success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Please wait before retrying.' },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const model = getGeminiModelName();
     const chatGrounding = buildChatPrompt(profile, currentAqi, dominantPollutant, language);
 
-    // Format conversation history into Gemini format
+    // Format conversation history into Gemini format with strict user content sandboxing
     const contents = [
       {
         role: 'user',
@@ -68,7 +68,14 @@ export async function POST(request: NextRequest) {
       },
       ...messages.map((m) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
+        parts: [
+          {
+            text:
+              m.role === 'user'
+                ? `<untrusted_user_message>\n${m.content}\n</untrusted_user_message>`
+                : m.content,
+          },
+        ],
       })),
     ];
 
