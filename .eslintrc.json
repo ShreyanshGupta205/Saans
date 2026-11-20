@@ -1,9 +1,13 @@
 {
   "extends": [
-    "next/core-web-vitals"
+    "next/core-web-vitals",
+    "plugin:sonarjs/recommended",
+    "plugin:security/recommended-legacy"
   ],
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "sonarjs",
+    "security"
   ],
   "rules": {
     "@typescript-eslint/no-explicit-any": "error",
@@ -14,11 +18,34 @@
         "varsIgnorePattern": "^_"
       }
     ],
+    "complexity": ["error", 10],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 40,
+        "skipBlankLines": true,
+        "skipComments": true,
+        "IIFEs": true
+      }
+    ],
+    "sonarjs/no-duplicate-string": "off",
+    "sonarjs/cognitive-complexity": ["error", 15],
+    "security/detect-object-injection": "off",
     "no-console": [
       "warn",
       {
         "allow": ["warn", "error", "info"]
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["components/**/*.{ts,tsx}", "app/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "data/**/*.{ts,tsx}"],
+      "rules": {
+        "complexity": "off",
+        "sonarjs/cognitive-complexity": "off",
+        "max-lines-per-function": "off"
+      }
+    }
+  ]
 }

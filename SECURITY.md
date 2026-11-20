@@ -7,11 +7,13 @@ Saans handles public air quality awareness, household lifestyle profiles, and co
 
 ## 2. Threat Modeling & Defenses
 
-### 2.1 Prompt-Injection Defense
+### 2.1 Prompt-Injection Defense & Output Safety Guard
 - **Untrusted User Input:** Chat questions, search queries, and household profile fields are treated as untrusted data.
 - **Delimiter Sandbox:** Profile and real-time AQI values are strictly segregated into explicit XML delimiters (`<household_profile>`, `<current_air_quality>`, `<live_context>`).
 - **System Instruction Isolation:** Untrusted user input is never concatenated into system instructions.
 - **Scope Restriction:** The system prompt instructs the model to refuse instructions asking to reveal system instructions, bypass safety rules, write code, or discuss topics outside air pollution and clean air.
+- **Output Safety Guard (`lib/llm/guard.ts`):** All model responses pass through an automated safety validator that blocks URLs (`https?://`), raw HTML tags/comments, and prompt override commands (`ignore previous instructions`, `DAN`, `jailbreak`).
+- **Injection Test Corpus:** A dedicated test suite with 22 hostile prompt injection attacks (`tests/unit/injection-corpus.test.ts`) verifies schema integrity and system instruction confidentiality.
 - **Schema Re-Validation:** All LLM responses are parsed and re-validated using Zod schemas (`LLMPlanResponseSchema`). If the output deviates from expected schema, it is rejected and falls back to deterministic rules.
 
 ### 2.2 Server-Side Request Forgery (SSRF) Prevention
@@ -30,11 +32,16 @@ Saans handles public air quality awareness, household lifestyle profiles, and co
 - User profile selections (household demographics, commute mode, purifier status) reside exclusively in the client's browser `localStorage`.
 - No Personally Identifiable Information (PII) is ever written to server disk or database stores.
 
-### 2.5 Denial of Service & Rate Limiting
-- All route handlers (`/api/aqi`, `/api/plan`, `/api/chat`, `/api/geocode`) enforce per-IP rate limiting via `SlidingWindowRateLimiter`.
-- Requests exceeding configured limits receive HTTP 429 with standard `Retry-After` headers.
+### 2.5 Denial of Service & Pluggable Rate Limiting
+- All route handlers (`/api/aqi`, `/api/plan`, `/api/chat`, `/api/geocode`) enforce per-IP rate limiting via the `RateLimiter` interface (`lib/rate-limit/limiter.ts`).
+- Dual implementation: `InMemoryRateLimiter` (with auto-eviction of expired client buckets) and `UpstashRedisRateLimiter` (atomic REST pipeline over distributed Redis with automatic fallback to local memory upon network error).
+- Verified via fake clock testing (`tests/unit/rate-limit-upgrades.test.ts`). Requests exceeding configured limits receive HTTP 429 with standard `Retry-After` headers.
 
-### 2.6 Medical Safety Boundary & Clinical Disclaimer
+### 2.6 Supply Chain & Dependency Auditing
+- Automated Dependabot scanning configured via `.github/dependabot.yml` for npm dependencies and GitHub Actions.
+- Continuous Integration workflow (`.github/workflows/ci.yml`) executes `gitleaks` secret detection, `npm audit`, `depcruise` architectural boundary enforcement, `typecheck`, `lint`, and automated testing on every push and pull request.
+
+### 2.7 Medical Safety Boundary & Clinical Disclaimer
 - Saans is an air quality advisory tool, **not a medical diagnosis or treatment platform**.
 - The application prominently displays medical notices:
   1. For severe breathlessness, stridor, wheezing, blue lips, or acute asthma attacks, users are instructed to seek emergency medical care at an emergency room immediately.

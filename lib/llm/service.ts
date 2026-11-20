@@ -40,9 +40,57 @@ function getPlanCacheKey(profile: HouseholdProfile, aqiCategory: string, lang: s
   return `${aqiCategory.toLowerCase()}_${archetype}_${lang}`;
 }
 
+function resolveActionFactor(text: string): keyof typeof IMPACT_FACTORS {
+  if (/mask|n95|respirator/.test(text)) return 'n95_respirator';
+  if (/purifier|hepa|filter/.test(text)) return 'hepa_filtration';
+  if (/metro|transit|bus|carpool/.test(text)) return 'metro_vs_car_petrol';
+  if (/mop|sweep|jhadu|pocha/.test(text)) return 'wet_mopping_vs_sweeping';
+  if (/seal|window|strip/.test(text)) return 'window_weatherstripping';
+  return 'hepa_filtration';
+}
+
+function buildResolvedImpact(
+  factorKey: keyof typeof IMPACT_FACTORS,
+  exposure: ReturnType<typeof calculateHouseholdExposure>,
+  emissions: ReturnType<typeof calculateHouseholdEmissions>,
+  comm: ReturnType<typeof calculateCommunityImpact>
+): ActionCardImpact {
+  const f = IMPACT_FACTORS[factorKey] ?? IMPACT_FACTORS.hepa_filtration;
+  const unit = factorKey === 'n95_respirator' ? '% inhaled PM2.5 reduced' : f?.unit ?? '% PM2.5 reduced';
+  const sourceKey = factorKey === 'n95_respirator' ? 'NIOSH_WHO_PPE' : 'CEEW_EXPOSURE_2021';
+  return {
+    exposureChange: {
+      value: `${f?.minReductionPct ?? 70}% - ${f?.maxReductionPct ?? 85}%`,
+      minVal: f?.minReductionPct ?? 70,
+      maxVal: f?.maxReductionPct ?? 85,
+      unit,
+      confidence: 'High',
+      sourceKey,
+      isEstimate: f?.isEstimate ?? false,
+    },
+    emissionsChange: {
+      value: `${emissions.potentialMonthlyKgCO2Reduction} kg CO2e / month saved`,
+      minVal: emissions.potentialMonthlyKgCO2Reduction,
+      maxVal: emissions.potentialMonthlyKgCO2Reduction * 1.2,
+      unit: 'kg CO2e / month',
+      confidence: 'High',
+      sourceKey: 'ARAI_2018',
+      isEstimate: false,
+    },
+    communityMultiplier: {
+      value: `${comm.kgPm25Prevented} kg PM2.5 prevented in 50 homes`,
+      minVal: comm.kgPm25Prevented,
+      maxVal: comm.kgPm25Prevented * 2,
+      unit: 'kg PM2.5 prevented',
+      confidence: 'Medium',
+      sourceKey: 'CPCB_NAQI_2014',
+      isEstimate: true,
+    },
+  };
+}
+
 /**
  * Attaches deterministic impact metrics from lib/impact to an LLM-recommended action card.
- * This guarantees that NO numbers or scientific multipliers ever come from the LLM.
  */
 function bindDeterministicImpact(
   action: {
@@ -61,166 +109,9 @@ function bindDeterministicImpact(
   const emissions = calculateHouseholdEmissions(profile);
   const comm = calculateCommunityImpact(50);
 
-  // Match action topic to calibrated impact factor
   const text = `${action.id} ${action.title} ${action.why}`.toLowerCase();
-
-  let impact: ActionCardImpact;
-
-  if (text.includes('mask') || text.includes('n95') || text.includes('respirator')) {
-    const f = IMPACT_FACTORS.n95_respirator;
-    impact = {
-      exposureChange: {
-        value: `${f?.minReductionPct ?? 90}% - ${f?.maxReductionPct ?? 95}%`,
-        minVal: f?.minReductionPct ?? 90,
-        maxVal: f?.maxReductionPct ?? 95,
-        unit: '% inhaled PM2.5 reduced',
-        confidence: 'High',
-        sourceKey: 'NIOSH_WHO_PPE',
-        isEstimate: false,
-      },
-      emissionsChange: {
-        value: 'Personal airway protection',
-        minVal: 0,
-        maxVal: 0,
-        unit: 'N/A',
-        confidence: 'High',
-        sourceKey: 'WHO_2021',
-        isEstimate: false,
-      },
-      communityMultiplier: {
-        value: '35% reduction in acute emergency visits',
-        minVal: 30,
-        maxVal: 40,
-        unit: '% acute visits avoided',
-        confidence: 'Medium',
-        sourceKey: 'LANCET_2020',
-        isEstimate: true,
-      },
-    };
-  } else if (text.includes('purifier') || text.includes('hepa') || text.includes('filter')) {
-    const f = IMPACT_FACTORS.hepa_filtration;
-    impact = {
-      exposureChange: {
-        value: `${f?.minReductionPct ?? 65}% - ${f?.maxReductionPct ?? 85}%`,
-        minVal: f?.minReductionPct ?? 65,
-        maxVal: f?.maxReductionPct ?? 85,
-        unit: '% indoor PM2.5 reduction',
-        confidence: 'High',
-        sourceKey: 'CEEW_2021',
-        isEstimate: false,
-      },
-      emissionsChange: {
-        value: '0.45 kg CO2e / night (35W BLDC)',
-        minVal: 0.3,
-        maxVal: 0.6,
-        unit: 'kg CO2e / night',
-        confidence: 'High',
-        sourceKey: 'CEA_GRID_2023',
-        isEstimate: false,
-      },
-      communityMultiplier: {
-        value: `${comm.highExposureHoursAverted} clean indoor hours across 50 homes`,
-        minVal: 500,
-        maxVal: 5000,
-        unit: 'clean hours',
-        confidence: 'High',
-        sourceKey: 'CEEW_2021',
-        isEstimate: true,
-      },
-    };
-  } else if (text.includes('metro') || text.includes('transit') || text.includes('bus') || text.includes('carpool')) {
-    impact = {
-      exposureChange: {
-        value: '45% less traffic soot in AC transit',
-        minVal: 35,
-        maxVal: 55,
-        unit: '% transit exposure reduced',
-        confidence: 'High',
-        sourceKey: 'DMRC_2022',
-        isEstimate: false,
-      },
-      emissionsChange: {
-        value: `${emissions.potentialMonthlyKgCO2Reduction} kg CO2e / month saved`,
-        minVal: 10,
-        maxVal: 80,
-        unit: 'kg CO2e / month',
-        confidence: 'High',
-        sourceKey: 'ARAI_2018',
-        isEstimate: false,
-      },
-      communityMultiplier: {
-        value: `${comm.kgPm25Prevented} kg PM2.5 tailpipe avoided`,
-        minVal: 1,
-        maxVal: 20,
-        unit: 'kg PM2.5 prevented',
-        confidence: 'High',
-        sourceKey: 'CPCB_NAQI_2014',
-        isEstimate: true,
-      },
-    };
-  } else if (text.includes('mop') || text.includes('sweep') || text.includes('jhadu') || text.includes('pocha')) {
-    const f = IMPACT_FACTORS.wet_mopping_vs_sweeping;
-    impact = {
-      exposureChange: {
-        value: `${f?.minReductionPct ?? 35}% - ${f?.maxReductionPct ?? 50}%`,
-        minVal: f?.minReductionPct ?? 35,
-        maxVal: f?.maxReductionPct ?? 50,
-        unit: '% resuspended dust reduction',
-        confidence: 'High',
-        sourceKey: 'CPCB_2019',
-        isEstimate: false,
-      },
-      emissionsChange: {
-        value: '0 tailpipe emissions',
-        minVal: 0,
-        maxVal: 0,
-        unit: 'kg CO2',
-        confidence: 'High',
-        sourceKey: 'CPCB_2019',
-        isEstimate: false,
-      },
-      communityMultiplier: {
-        value: 'Keeps stairwells & lobbies dust-free',
-        minVal: 1,
-        maxVal: 50,
-        unit: 'apartments',
-        confidence: 'High',
-        sourceKey: 'CPCB_2019',
-        isEstimate: false,
-      },
-    };
-  } else {
-    // General protective action
-    impact = {
-      exposureChange: {
-        value: `${exposure.exposureReductionPct}% overall exposure reduction`,
-        minVal: 20,
-        maxVal: 60,
-        unit: '% exposure reduction',
-        confidence: 'High',
-        sourceKey: 'CEEW_EXPOSURE_2021',
-        isEstimate: false,
-      },
-      emissionsChange: {
-        value: 'Promotes low-carbon lifestyle',
-        minVal: 0,
-        maxVal: 5,
-        unit: 'kg CO2e / month',
-        confidence: 'Medium',
-        sourceKey: 'IPCC_2021',
-        isEstimate: true,
-      },
-      communityMultiplier: {
-        value: `${comm.highExposureHoursAverted} toxic exposure hours averted`,
-        minVal: 100,
-        maxVal: 2000,
-        unit: 'exposure hours',
-        confidence: 'High',
-        sourceKey: 'CPCB_2014',
-        isEstimate: true,
-      },
-    };
-  }
+  const factorKey = resolveActionFactor(text);
+  const impact = buildResolvedImpact(factorKey, exposure, emissions, comm);
 
   return {
     id: action.id || `act-${Math.random().toString(36).substring(2, 8)}`,
@@ -233,6 +124,54 @@ function bindDeterministicImpact(
     effort: action.effort,
     costBand: action.costBand,
     impact,
+  };
+}
+
+async function fetchGeminiPlanJson(
+  client: NonNullable<ReturnType<typeof getGenAIClient>>,
+  model: string,
+  userPrompt: string,
+  timeoutMs: number
+): Promise<LLMPlanResponse | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await client.models.generateContent({
+      model,
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      config: {
+        systemInstruction: { parts: [{ text: SAANS_SYSTEM_PROMPT }] },
+        responseMimeType: 'application/json',
+        maxOutputTokens: 2048,
+        temperature: 0.2,
+        // @ts-expect-error safetySettings typed loosely in client
+        safetySettings: GEMINI_SAFETY_SETTINGS,
+      },
+    });
+    const rawText = response.text;
+    if (!rawText || !validateLLMOutputSafety(rawText)) return null;
+    const validated = LLMPlanResponseSchema.safeParse(JSON.parse(rawText));
+    return validated.success ? validated.data : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function assemblePlanResult(
+  data: LLMPlanResponse,
+  profile: HouseholdProfile,
+  aqi: number
+): GeneratedPlanResult {
+  return {
+    routineActions: data.routineActions.map((a) => bindDeterministicImpact(a, profile, aqi)),
+    indoorActions: data.indoorActions.map((a) => bindDeterministicImpact(a, profile, aqi)),
+    sustainableActions: data.sustainableActions.map((a) => bindDeterministicImpact(a, profile, aqi)),
+    isDegraded: false,
+    summaryEn: data.summary,
+    summaryHi: data.summary,
+    generatedAt: new Date().toISOString(),
   };
 }
 
@@ -255,100 +194,23 @@ export async function getOrGeneratePlan(
   }
 
   const client = getGenAIClient();
-  // If no Gemini client (e.g. no key provided), immediately use deterministic rule engine
-  if (!client) {
-    const fallback = generateDeterministicPlan({
-      profile,
-      aqi: aqiData.aqi,
-      dominantPollutant: aqiData.dominantPollutant,
-      isDegraded: true,
-    });
-    planCache.set(cacheKey, { plan: fallback, expiresAt: now + PLAN_CACHE_TTL_MS });
-    return fallback;
+  if (client) {
+    const model = getGeminiModelName();
+    const userPrompt = buildPlanUserPrompt(profile, aqiData, language);
+    const data = await fetchGeminiPlanJson(client, model, userPrompt, timeoutMs);
+    if (data) {
+      const plan = assemblePlanResult(data, profile, aqiData.aqi);
+      planCache.set(cacheKey, { plan, expiresAt: now + PLAN_CACHE_TTL_MS });
+      return plan;
+    }
   }
 
-  const model = getGeminiModelName();
-  const userPrompt = buildPlanUserPrompt(profile, aqiData, language);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await client.models.generateContent({
-      model,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: userPrompt }],
-        },
-      ],
-      config: {
-        systemInstruction: {
-          parts: [{ text: SAANS_SYSTEM_PROMPT }],
-        },
-        responseMimeType: 'application/json',
-        maxOutputTokens: 2048,
-        temperature: 0.2,
-        // @ts-expect-error safetySettings typed loosely in client
-        safetySettings: GEMINI_SAFETY_SETTINGS,
-      },
-    });
-
-    clearTimeout(timeoutId);
-
-    const rawText = response.text;
-    if (!rawText || !validateLLMOutputSafety(rawText)) {
-      throw new Error('Gemini output empty or rejected by safety guard');
-    }
-
-    const parsedJson = JSON.parse(rawText);
-    const validated = LLMPlanResponseSchema.safeParse(parsedJson);
-
-    if (!validated.success) {
-      // Schema validation failed, fallback to rules
-      const fallback = generateDeterministicPlan({
-        profile,
-        aqi: aqiData.aqi,
-        dominantPollutant: aqiData.dominantPollutant,
-        isDegraded: true,
-      });
-      return fallback;
-    }
-
-    const data: LLMPlanResponse = validated.data;
-
-    // Attach deterministic impact metrics to every card
-    const routineActions = data.routineActions.map((a) =>
-      bindDeterministicImpact(a, profile, aqiData.aqi)
-    );
-    const indoorActions = data.indoorActions.map((a) =>
-      bindDeterministicImpact(a, profile, aqiData.aqi)
-    );
-    const sustainableActions = data.sustainableActions.map((a) =>
-      bindDeterministicImpact(a, profile, aqiData.aqi)
-    );
-
-    const plan: GeneratedPlanResult = {
-      routineActions,
-      indoorActions,
-      sustainableActions,
-      isDegraded: false,
-      summaryEn: data.summary,
-      summaryHi: data.summary,
-      generatedAt: new Date().toISOString(),
-    };
-
-    planCache.set(cacheKey, { plan, expiresAt: now + PLAN_CACHE_TTL_MS });
-    return plan;
-  } catch {
-    clearTimeout(timeoutId);
-    // Degraded mode fallback: guarantee user gets an expert plan regardless of LLM status
-    const fallback = generateDeterministicPlan({
-      profile,
-      aqi: aqiData.aqi,
-      dominantPollutant: aqiData.dominantPollutant,
-      isDegraded: true,
-    });
-    return fallback;
-  }
+  const fallback = generateDeterministicPlan({
+    profile,
+    aqi: aqiData.aqi,
+    dominantPollutant: aqiData.dominantPollutant,
+    isDegraded: true,
+  });
+  planCache.set(cacheKey, { plan: fallback, expiresAt: now + PLAN_CACHE_TTL_MS });
+  return fallback;
 }

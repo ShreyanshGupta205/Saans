@@ -236,18 +236,7 @@ function buildEmptyAQIResult(): ComputedAQIResult {
   };
 }
 
-/**
- * Computes the overall Indian NAQI from a dictionary of pollutant concentrations.
- * Per CPCB methodology:
- *   Overall AQI = Max(Sub-index_i)
- *   Requires at least 3 pollutants, including PM10 or PM2.5.
- *
- * @param concentrations Record of pollutant concentrations
- * @returns ComputedAQIResult
- */
-export function computeIndianAQI(
-  concentrations: Partial<Record<PollutantKey, number>>
-): ComputedAQIResult {
+function computeBreakdown(concentrations: Partial<Record<PollutantKey, number>>) {
   const breakdown: Partial<Record<PollutantKey, PollutantReading>> = {};
   let maxSubIndex = 0;
   let dominant: PollutantKey = 'pm25';
@@ -270,6 +259,22 @@ export function computeIndianAQI(
       }
     }
   }
+  return { breakdown, maxSubIndex, dominant };
+}
+
+/**
+ * Computes the overall Indian NAQI from a dictionary of pollutant concentrations.
+ * Per CPCB methodology:
+ *   Overall AQI = Max(Sub-index_i)
+ *   Requires at least 3 pollutants, including PM10 or PM2.5.
+ *
+ * @param concentrations Record of pollutant concentrations
+ * @returns ComputedAQIResult
+ */
+export function computeIndianAQI(
+  concentrations: Partial<Record<PollutantKey, number>>
+): ComputedAQIResult {
+  const { breakdown, maxSubIndex, dominant } = computeBreakdown(concentrations);
 
   if (maxSubIndex === 0 && !breakdown.pm25) {
     return buildEmptyAQIResult();

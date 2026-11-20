@@ -96,6 +96,31 @@ export class InMemoryRateLimiter implements RateLimiter {
 // Backward compatibility alias
 export const SlidingWindowRateLimiter = InMemoryRateLimiter;
 
+async function fetchUpstashCount(
+  url: string,
+  token: string,
+  redisKey: string,
+  windowSeconds: number
+): Promise<number | null> {
+  const response = await fetch(`${url}/pipeline`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([
+      ['INCR', redisKey],
+      ['EXPIRE', redisKey, windowSeconds * 2],
+    ]),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+  const results = (await response.json()) as Array<{ result: number }>;
+  return Number(results[0]?.result ?? 1);
+}
+
 /**
  * Upstash Redis distributed rate limiter using the HTTP REST pipeline.
  * Falls back to InMemoryRateLimiter if Upstash is unreachable or returns 5xx.
@@ -122,26 +147,12 @@ export class UpstashRedisRateLimiter implements RateLimiter {
 
     try {
       const redisKey = `saans_rate:${key}:${Math.floor(now / (this.windowSeconds * 1000))}`;
-      const response = await fetch(`${this.url}/pipeline`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([
-          ['INCR', redisKey],
-          ['EXPIRE', redisKey, this.windowSeconds * 2],
-        ]),
-      });
-
-      if (!response.ok) {
+      const count = await fetchUpstashCount(this.url, this.token, redisKey, this.windowSeconds);
+      if (count === null) {
         return this.fallback.check(key, now);
       }
 
-      const results = (await response.json()) as Array<{ result: number }>;
-      const count = Number(results[0]?.result ?? 1);
       const resetTime = now + this.windowSeconds * 1000;
-
       if (count > this.limit) {
         const retryAfterSeconds = Math.max(1, Math.ceil((resetTime - now) / 1000));
         return {

@@ -13,11 +13,13 @@ import { env } from '../../lib/env';
 import { buildChatPrompt, buildPlanUserPrompt } from '../../lib/llm/prompt';
 import { clearPlanCache, getOrGeneratePlan } from '../../lib/llm/service';
 import { clearDataCaches, fetchOpenMeteoAirQuality, searchOpenMeteoLocations } from '../../lib/data/open-meteo';
-import { SlidingWindowRateLimiter } from '../../lib/rate-limit/limiter';
+import { SlidingWindowRateLimiter, UpstashRedisRateLimiter } from '../../lib/rate-limit/limiter';
 import { HouseholdProfile } from '../../lib/impact/types';
 import { HourlyForecastItem } from '../../lib/aqi/types';
 import { calculateHouseholdExposure } from '../../lib/impact/exposure';
 import { calculateHouseholdEmissions } from '../../lib/impact/emissions';
+import { getProfileArchetype, ALL_PROFILE_ARCHETYPES } from '../../lib/impact/archetypes';
+import { validateLLMOutputSafety } from '../../lib/llm/guard';
 import * as clientModule from '../../lib/llm/client';
 
 const testProfile: HouseholdProfile = {
@@ -414,5 +416,80 @@ describe('Alternative Home & Fuel Impact Branches', () => {
 
     const pngEmissions = calculateHouseholdEmissions({ ...testProfile, cookingFuel: 'png' });
     expect(pngEmissions.dailyCookingKgCO2).toBe(0.74);
+  });
+});
+
+describe('12 Profile Archetypes & Remaining Edge Branches', () => {
+  const base: HouseholdProfile = {
+    locationName: 'Delhi',
+    lat: 28.61,
+    lon: 77.21,
+    adultsCount: 2,
+    childrenCount: 0,
+    elderlyCount: 0,
+    hasSensitiveMembers: false,
+    commuteMode: 'metro',
+    commuteDistanceKm: 10,
+    workFromHomeDays: 0,
+    homeType: 'apartment_highrise',
+    cookingFuel: 'lpg',
+    hasAirPurifier: false,
+    language: 'en',
+  };
+
+  it('classifies every one of the 12 archetypes correctly', () => {
+    expect(getProfileArchetype({ ...base, cookingFuel: 'biomass' })).toBe('solid_fuel_vulnerable');
+    expect(getProfileArchetype({ ...base, hasSensitiveMembers: true })).toBe('sensitive_solo_commuter');
+    expect(getProfileArchetype({ ...base, elderlyCount: 1, hasAirPurifier: true })).toBe('elderly_purifier_owner');
+    expect(getProfileArchetype({ ...base, elderlyCount: 1, hasAirPurifier: false })).toBe('elderly_no_purifier');
+    expect(getProfileArchetype({ ...base, childrenCount: 2, commuteMode: 'car_petrol' })).toBe('young_kids_car_commute');
+    expect(getProfileArchetype({ ...base, childrenCount: 1, commuteMode: 'bus' })).toBe('young_kids_transit');
+    expect(getProfileArchetype({ ...base, workFromHomeDays: 4, hasAirPurifier: true })).toBe('remote_worker_with_purifier');
+    expect(getProfileArchetype({ ...base, workFromHomeDays: 3, hasAirPurifier: false })).toBe('remote_worker_no_purifier');
+    expect(getProfileArchetype({ ...base, commuteMode: 'car_diesel', commuteDistanceKm: 20 })).toBe('high_commute_motorized');
+    expect(getProfileArchetype({ ...base, commuteMode: 'two_wheeler', commuteDistanceKm: 5 })).toBe('short_commute_motorized');
+    expect(getProfileArchetype({ ...base, commuteMode: 'walk_cycle' })).toBe('transit_user_pucca');
+    expect(getProfileArchetype({ ...base, commuteMode: 'other' as unknown as HouseholdProfile['commuteMode'] })).toBe('baseline_family');
+    expect(ALL_PROFILE_ARCHETYPES.length).toBe(12);
+  });
+
+  it('covers Upstash reset and fetch failure branches', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const limiter = new UpstashRedisRateLimiter('https://fake-upstash.io', 'fake-token', 5, 60);
+    const res = await limiter.check('test-key', Date.now());
+    expect(res.success).toBe(true);
+
+    limiter.reset('test-key');
+    limiter.reset();
+
+    vi.unstubAllGlobals();
+  });
+
+  it('covers geocode cache hit branch in searchOpenMeteoLocations', async () => {
+    clearDataCaches();
+    const mockResults = [{ id: 1, name: 'Delhi', latitude: 28.61, longitude: 77.21, country: 'India' }];
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: mockResults }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const first = await searchOpenMeteoLocations('Delhi');
+    expect(first).toEqual(mockResults);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Second call hits cache, fetch is not called again
+    const second = await searchOpenMeteoLocations('Delhi');
+    expect(second).toEqual(mockResults);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('validates empty or whitespace strings as unsafe in validateLLMOutputSafety', () => {
+    expect(validateLLMOutputSafety('')).toBe(false);
+    expect(validateLLMOutputSafety('   ')).toBe(false);
   });
 });

@@ -48,27 +48,22 @@ function buildWindowAdvisory(
   };
 }
 
-/**
- * Scans 24-hour forecast data to locate the optimal continuous 2-hour window.
- */
-export function computeBestOutdoorWindow(
-  forecast: readonly HourlyForecastItem[]
-): OutdoorWindowRecommendation {
-  if (forecast.length === 0) {
-    return {
-      startHour: 13,
-      endHour: 15,
-      startTimeLabel: '1:00 PM',
-      endTimeLabel: '3:00 PM',
-      avgPm25: 150,
-      minPm25: 120,
-      isSafeWindow: false,
-      recommendationEn: 'Data unavailable. Keep windows closed during morning/night inversion.',
-      recommendationHi: 'डेटा उपलब्ध नहीं है। सुबह और रात के समय खिड़कियां बंद रखें।',
-      ventilationDurationMinutes: 10,
-    };
-  }
+function buildDefaultWindow(): OutdoorWindowRecommendation {
+  return {
+    startHour: 13,
+    endHour: 15,
+    startTimeLabel: '1:00 PM',
+    endTimeLabel: '3:00 PM',
+    avgPm25: 150,
+    minPm25: 120,
+    isSafeWindow: false,
+    recommendationEn: 'Data unavailable. Keep windows closed during morning/night inversion.',
+    recommendationHi: 'डेटा उपलब्ध नहीं है। सुबह और रात के समय खिड़कियां बंद रखें।',
+    ventilationDurationMinutes: 10,
+  };
+}
 
+function findBest2HourWindow(forecast: readonly HourlyForecastItem[]) {
   let minAvg = Infinity;
   let bestIdx = 0;
   for (let i = 0; i < forecast.length - 1; i++) {
@@ -82,7 +77,20 @@ export function computeBestOutdoorWindow(
       }
     }
   }
+  return { minAvg, bestIdx };
+}
 
+/**
+ * Scans 24-hour forecast data to locate the optimal continuous 2-hour window.
+ */
+export function computeBestOutdoorWindow(
+  forecast: readonly HourlyForecastItem[]
+): OutdoorWindowRecommendation {
+  if (forecast.length === 0) {
+    return buildDefaultWindow();
+  }
+
+  const { minAvg, bestIdx } = findBest2HourWindow(forecast);
   const sItem = forecast[bestIdx] ?? forecast[0];
   const eItem = forecast[bestIdx + 1] ?? forecast[forecast.length - 1];
   const startHour = sItem ? sItem.hour : 13;

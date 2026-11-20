@@ -88,11 +88,13 @@ function buildCardImpact(factorKey: keyof typeof IMPACT_FACTORS, numbers: PlanNu
     },
     communityMultiplier: {
       value: `x${numbers.community.householdsCount}`,
-      communityMetric: `${numbers.community.kgPm25Prevented} kg PM2.5 saved if 50 homes join`,
-      descriptionEn: `If 50 societies in your sector follow this, ${numbers.community.kgPm25Prevented} kg of toxic winter soot is prevented.`,
-      descriptionHi: `यदि आपके सेक्टर के 50 परिवार इसे अपनाएं, तो ${numbers.community.kgPm25Prevented} किग्रा जहरीला धुआं हवा में जाने से बचेगा।`,
+      minVal: numbers.community.kgPm25Prevented,
+      maxVal: numbers.community.kgPm25Prevented * 2,
+      unit: 'kg PM2.5 prevented',
       confidence: 'Medium',
       sourceKey: 'NEIGHBOURHOOD_SCALING_MODEL',
+      isEstimate: true,
+      qualitativeNote: `If 50 societies in your sector follow this, ${numbers.community.kgPm25Prevented} kg of toxic winter soot is prevented.`,
     },
   };
 }

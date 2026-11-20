@@ -81,13 +81,46 @@ export function roundCoordinate(coord: number): number {
   return Math.round(coord * 100) / 100;
 }
 
+function buildSingleHourlyItem(
+  timeStr: string,
+  pm25: number,
+  pm10: number,
+  no2?: number,
+  o3?: number,
+  fallbackHour = 0
+): HourlyForecastItem {
+  const parsedHour = new Date(timeStr).getHours();
+  const aqiRes = computeIndianAQI({ pm25, pm10, no2, o3 });
+  return {
+    time: timeStr,
+    hour: isNaN(parsedHour) ? fallbackHour : parsedHour,
+    pm25: Math.round(pm25),
+    pm10: Math.round(pm10),
+    no2: no2 !== undefined ? Math.round(no2) : undefined,
+    o3: o3 !== undefined ? Math.round(o3) : undefined,
+    aqi: aqiRes.aqi,
+    category: aqiRes.category,
+  };
+}
+
+function parseHourlyForecast(hourly?: OpenMeteoAirQualityData['hourly']): HourlyForecastItem[] {
+  if (!hourly) return [];
+  const items: HourlyForecastItem[] = [];
+  const limit = Math.min(24, hourly.time.length);
+
+  for (let i = 0; i < limit; i++) {
+    const timeStr = hourly.time[i] || '';
+    const pm25 = hourly.pm2_5[i] || 0;
+    const pm10 = hourly.pm10[i] || 0;
+    const no2 = hourly.nitrogen_dioxide?.[i];
+    const o3 = hourly.ozone?.[i];
+    items.push(buildSingleHourlyItem(timeStr, pm25, pm10, no2, o3, i));
+  }
+  return items;
+}
+
 /**
  * Fetches real-time and forecast air quality data from Open-Meteo.
- *
- * @param lat Latitude (-90 to 90)
- * @param lon Longitude (-180 to 180)
- * @param timeoutMs Timeout in milliseconds (default 8000ms)
- * @returns Raw air quality data and computed hourly forecast
  */
 export async function fetchOpenMeteoAirQuality(
   lat: number,
@@ -113,10 +146,7 @@ export async function fetchOpenMeteoAirQuality(
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Saans-CleanAir/1.0',
-      },
+      headers: { Accept: 'application/json', 'User-Agent': 'Saans-CleanAir/1.0' },
     });
 
     if (!res.ok) {
@@ -124,38 +154,7 @@ export async function fetchOpenMeteoAirQuality(
     }
 
     const raw = (await res.json()) as OpenMeteoAirQualityData;
-
-    // Process next 24 hours of forecast
-    const hourlyForecast: HourlyForecastItem[] = [];
-    const times = raw.hourly?.time ?? [];
-    const pm25s = raw.hourly?.pm2_5 ?? [];
-    const pm10s = raw.hourly?.pm10 ?? [];
-    const no2s = raw.hourly?.nitrogen_dioxide ?? [];
-    const o3s = raw.hourly?.ozone ?? [];
-
-    const limit = Math.min(24, times.length);
-    for (let i = 0; i < limit; i++) {
-      const timeStr = times[i] ?? '';
-      const pm25 = pm25s[i] ?? 0;
-      const pm10 = pm10s[i] ?? 0;
-      const no2 = no2s[i];
-      const o3 = o3s[i];
-
-      const hour = new Date(timeStr).getHours();
-      const aqiRes = computeIndianAQI({ pm25, pm10, no2, o3 });
-
-      hourlyForecast.push({
-        time: timeStr,
-        hour: isNaN(hour) ? i : hour,
-        pm25: Math.round(pm25),
-        pm10: Math.round(pm10),
-        no2: no2 !== undefined ? Math.round(no2) : undefined,
-        o3: o3 !== undefined ? Math.round(o3) : undefined,
-        aqi: aqiRes.aqi,
-        category: aqiRes.category,
-      });
-    }
-
+    const hourlyForecast = parseHourlyForecast(raw.hourly);
     const result = { raw, hourlyForecast };
     aqiCache.set(cacheKey, { data: result, expiresAt: now + AQI_CACHE_TTL_MS });
     return result;
@@ -169,12 +168,26 @@ export async function fetchOpenMeteoAirQuality(
   }
 }
 
+async function fetchGeocodingNetwork(url: string, timeoutMs: number): Promise<GeocodingResult[]> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json', 'User-Agent': 'Saans-CleanAir/1.0' },
+    });
+    if (!res.ok) {
+      throw new Error(`Open-Meteo Geocoding HTTP ${res.status}: ${res.statusText}`);
+    }
+    const json = (await res.json()) as { results?: GeocodingResult[] };
+    return (json.results ?? []).filter((r) => r.country_code === 'IN' || r.country === 'India');
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Searches for Indian cities and towns using Open-Meteo Geocoding.
- *
- * @param query Search query string
- * @param timeoutMs Timeout in milliseconds (default 5000ms)
- * @returns Array of geocoding results
  */
 export async function searchOpenMeteoLocations(
   query: string,
@@ -194,27 +207,8 @@ export async function searchOpenMeteoLocations(
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(sanitized)}&count=10&language=en&format=json&country_code=IN`;
   validateUpstreamUrl(url);
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Saans-CleanAir/1.0',
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`Open-Meteo Geocoding HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    const json = (await res.json()) as { results?: GeocodingResult[] };
-    const results = (json.results ?? []).filter(
-      (r) => r.country_code === 'IN' || r.country === 'India'
-    );
-
+    const results = await fetchGeocodingNetwork(url, timeoutMs);
     geocodeCache.set(sanitized, { data: results, expiresAt: now + GEOCODE_CACHE_TTL_MS });
     return results;
   } catch (err) {
@@ -222,8 +216,6 @@ export async function searchOpenMeteoLocations(
       throw new Error(`Open-Meteo Geocoding API timed out after ${timeoutMs}ms`);
     }
     throw err;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 

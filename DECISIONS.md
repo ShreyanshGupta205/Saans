@@ -77,3 +77,32 @@ Modern web applications must protect against Cross-Site Scripting (XSS), data ex
 
 ### Decision
 We integrated Next.js middleware that generates a unique base64 cryptographic nonce per HTTP request, configuring `script-src 'self' 'nonce-...' 'strict-dynamic'`, `object-src 'none'`, and `frame-ancestors 'none'`.
+
+---
+
+## ADR 007: Two-Layer Plan Architecture (Numbers vs Narrative) & Bounded Archetypes
+
+### Context
+To deliver instantaneous rendering for mobile citizens under severe smog while utilizing GenAI for empathetic natural language guidance, plans cannot be blocked on slow upstream LLM generation. Furthermore, LLMs must never produce statistical numbers.
+
+### Decision
+We cleanly split every personalized plan into two distinct layers:
+1. **Numbers Layer (<100ms):** Computed per user from live AQI and detailed household profile via pure deterministic math in `lib/impact`. This layer is never shared across users.
+2. **Narrative Layer (Gemini):** High-quality natural language explanations keyed by `(aqiBucket, profileArchetype, language)`. We define $\le 12$ bounded archetypes (e.g. `young_kids_car_commute`, `elderly_no_purifier`, `solid_fuel_vulnerable`), resulting in high narrative cache hit rates.
+
+### UX Flow
+The UI immediately renders the rule-based plan with the deterministic numbers layer. In the background, the Gemini narrative hydrates asynchronously with an 8-second timeout guard. If Gemini times out or errors, the rule-based narrative is retained and a discrete "basic mode" notice is presented without breaking the user experience.
+
+---
+
+## ADR 008: Pluggable RateLimiter Interface (In-Memory + Upstash Redis)
+
+### Context
+Public API routes (`/api/aqi`, `/api/plan`, `/api/chat`, `/api/geocode`) require rate limiting to prevent Denial of Service (DoS) and abusive token consumption. Single-instance deployments operate fine with in-memory limits, but serverless environments can benefit from distributed Redis coordination.
+
+### Decision
+We formalized a strict `RateLimiter` interface with two implementations:
+1. `InMemoryRateLimiter`: Sliding-window token limiter with automatic expired entry pruning.
+2. `UpstashRedisRateLimiter`: Atomic REST pipeline over Upstash Redis with automatic failover to the local in-memory store if network calls fail.
+
+Both implementations are verified using Vitest fake timers and clock advancing tests.

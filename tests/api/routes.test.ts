@@ -49,7 +49,7 @@ describe('API Route Handlers', () => {
       const res = await aqiGet(req);
 
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { aqiResult: { aqi: number }; outdoorWindow: unknown };
       expect(json.aqiResult).toBeDefined();
       expect(json.aqiResult.aqi).toBeGreaterThan(0);
       expect(json.outdoorWindow).toBeDefined();
@@ -68,7 +68,7 @@ describe('API Route Handlers', () => {
       const res = await aqiGet(req);
 
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { isDegraded: boolean; aqiResult: unknown };
       expect(json.isDegraded).toBe(true);
       expect(json.aqiResult).toBeDefined();
     });
@@ -130,7 +130,7 @@ describe('API Route Handlers', () => {
 
       const res = await planPost(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { plan: { routineActions: unknown[] } };
       expect(json.plan).toBeDefined();
       expect(json.plan.routineActions.length).toBeGreaterThan(0);
     });
@@ -187,7 +187,7 @@ describe('API Route Handlers', () => {
       const req = new NextRequest('http://localhost:3000/api/geocode');
       const res = await geocodeGet(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { locations: unknown[] };
       expect(json.locations.length).toBeGreaterThan(0);
     });
 
@@ -195,7 +195,7 @@ describe('API Route Handlers', () => {
       const req = new NextRequest('http://localhost:3000/api/geocode?q=Gurugram');
       const res = await geocodeGet(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { locations: unknown[] };
       expect(json.locations.length).toBeGreaterThan(0);
     });
   });

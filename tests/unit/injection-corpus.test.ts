@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildChatUserPrompt, buildPlanUserPrompt } from '../../lib/llm/prompt';
+import { buildChatUserPrompt } from '../../lib/llm/prompt';
 import { validateLLMOutputSafety } from '../../lib/llm/guard';
 import { HouseholdProfile } from '../../lib/impact/types';
 import { ComputedAQIResult } from '../../lib/aqi/types';
@@ -31,8 +31,12 @@ describe('Hostile Prompt Injection Corpus (>= 20 strings)', () => {
   ];
 
   const dummyProfile: HouseholdProfile = {
-    location: { latitude: 28.61, longitude: 77.23, cityName: 'Delhi' },
-    household: { adults: 2, children: 1, elderly: 0 },
+    locationName: 'Delhi',
+    lat: 28.61,
+    lon: 77.23,
+    adultsCount: 2,
+    childrenCount: 1,
+    elderlyCount: 0,
     hasSensitiveMembers: false,
     commuteMode: 'car_petrol',
     commuteDistanceKm: 12,
@@ -40,6 +44,7 @@ describe('Hostile Prompt Injection Corpus (>= 20 strings)', () => {
     cookingFuel: 'lpg',
     hasAirPurifier: true,
     workFromHomeDays: 2,
+    language: 'en',
   };
 
   const dummyAQI: ComputedAQIResult = {

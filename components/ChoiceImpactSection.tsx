@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle2, SlidersHorizontal, Sparkles, XCircle } from 'lucide-react';
+import { CheckCircle2, SlidersHorizontal, XCircle } from 'lucide-react';
 import { HouseholdProfile } from '@/lib/impact/types';
 import { calculateChoiceImpact, ActionChoiceImpact } from '@/lib/impact/choice-impact';
 

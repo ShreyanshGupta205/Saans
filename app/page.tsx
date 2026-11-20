@@ -74,9 +74,9 @@ export default function HomePage() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
+        const parsed = JSON.parse(saved) as Partial<HouseholdProfile>;
         if (parsed.lat && parsed.lon) {
-          setProfile(parsed);
+          setProfile((prev) => ({ ...prev, ...parsed } as HouseholdProfile));
           setLanguage(parsed.language || 'en');
         }
       }
@@ -91,7 +91,13 @@ export default function HomePage() {
       const res = await fetch(`/api/aqi?lat=${lat}&lon=${lon}`);
       if (!res.ok) throw new Error(`AQI API error: ${res.status}`);
 
-      const data = await res.json();
+      const data = (await res.json()) as {
+        aqiResult: ComputedAQIResult;
+        hourlyForecast?: HourlyForecastItem[];
+        outdoorWindow: OutdoorWindowRecommendation;
+        isDegraded: boolean;
+        degradedReason?: string;
+      };
       setAqiData(data.aqiResult);
       setHourlyForecast(data.hourlyForecast || []);
       setOutdoorWindow(data.outdoorWindow);
@@ -137,7 +143,7 @@ export default function HomePage() {
         });
 
         if (!res.ok) throw new Error(`Plan API error: ${res.status}`);
-        const data = await res.json();
+        const data = (await res.json()) as { plan: GeneratedPlanResult };
         setPlan(data.plan);
         if (data.plan.isDegraded) {
           setIsDegraded(true);

@@ -24,12 +24,12 @@ describe('Property-Based Testing (fast-check) for Impact Engine', () => {
   const homeTypes: HomeType[] = ['apartment_highrise', 'apartment_lowrise', 'independent_house', 'semi_pucca'];
 
   const profileArbitrary = fc.record({
-    location: fc.constant({ latitude: 28.61, longitude: 77.23, cityName: 'Delhi' }),
-    household: fc.record({
-      adults: fc.integer({ min: 1, max: 10 }),
-      children: fc.integer({ min: 0, max: 6 }),
-      elderly: fc.integer({ min: 0, max: 6 }),
-    }),
+    locationName: fc.constant('Delhi'),
+    lat: fc.constant(28.61),
+    lon: fc.constant(77.23),
+    adultsCount: fc.integer({ min: 1, max: 10 }),
+    childrenCount: fc.integer({ min: 0, max: 6 }),
+    elderlyCount: fc.integer({ min: 0, max: 6 }),
     hasSensitiveMembers: fc.boolean(),
     commuteMode: fc.constantFrom(...commuteModes),
     commuteDistanceKm: fc.float({ min: 0, max: 100, noNaN: true }),
@@ -37,6 +37,7 @@ describe('Property-Based Testing (fast-check) for Impact Engine', () => {
     cookingFuel: fc.constantFrom(...cookingFuels),
     hasAirPurifier: fc.boolean(),
     workFromHomeDays: fc.integer({ min: 0, max: 7 }),
+    language: fc.constantFrom('en' as const, 'hi' as const),
   }) as fc.Arbitrary<HouseholdProfile>;
 
   it('Property: Exposure values are strictly non-negative and reduction % is between 0 and 95', () => {
