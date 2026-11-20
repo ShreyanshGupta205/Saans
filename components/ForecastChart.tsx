@@ -14,7 +14,15 @@ export function ForecastChart({ forecast, isHindi = false }: ForecastChartProps)
   const [showTable, setShowTable] = useState(false);
 
   if (forecast.length === 0) {
-    return null;
+    return (
+      <section
+        aria-labelledby="forecast-heading"
+        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5 shadow-sm min-h-[260px] animate-pulse"
+      >
+        <div className="h-6 w-48 bg-zinc-800 rounded mb-4" />
+        <div className="h-44 bg-zinc-800/40 rounded-lg" />
+      </section>
+    );
   }
 
   // Find max PM2.5 value for SVG scaling (min 100 to ensure reasonable graph height)

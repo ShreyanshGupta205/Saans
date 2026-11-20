@@ -145,10 +145,6 @@ export default function HomePage() {
         if (!res.ok) throw new Error(`Plan API error: ${res.status}`);
         const data = (await res.json()) as { plan: GeneratedPlanResult };
         setPlan(data.plan);
-        if (data.plan.isDegraded) {
-          setIsDegraded(true);
-          setDegradedReason('AI generation offline; using deterministic rule-based plan.');
-        }
       } catch {
         const fallback = generateDeterministicPlan({
           profile: prof,
@@ -157,8 +153,6 @@ export default function HomePage() {
           isDegraded: true,
         });
         setPlan(fallback);
-        setIsDegraded(true);
-        setDegradedReason('Using offline calibrated plan engine.');
       } finally {
         setIsRefreshingPlan(false);
       }

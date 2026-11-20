@@ -85,7 +85,7 @@ export function TodayDashboard({
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
                 {locationName}
               </span>
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-zinc-400" suppressHydrationWarning>
                 {new Date(aqiData.timestamp).toLocaleTimeString(isHindi ? 'hi-IN' : 'en-US', {
                   hour: 'numeric',
                   minute: '2-digit',

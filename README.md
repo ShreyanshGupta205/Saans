@@ -14,7 +14,7 @@
 
 | Metric | Threshold / Target | Audited Value | Verification Tool / Command | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Lighthouse Performance** | $\ge 95$ | **98 / 100** | Google Lighthouse / Next.js Bundle Analyzer | **PASS** |
+| **Lighthouse Performance** | $\ge 95$ | **100 / 100** | Google Lighthouse (FCP 0.8s, LCP 0.8s, TBT 0ms, CLS 0.011) | **PASS** |
 | **Lighthouse Accessibility** | $\ge 95$ | **100 / 100** | Google Lighthouse WCAG 2.2 audit | **PASS** |
 | **Lighthouse Best Practices** | $\ge 95$ | **100 / 100** | Strict CSP Nonce + HTTPS + HSTS audit | **PASS** |
 | **Lighthouse SEO** | $\ge 95$ | **100 / 100** | Meta tags, semantic HTML, bilingual alternates | **PASS** |
