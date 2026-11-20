@@ -1,0 +1,151 @@
+{
+  "app": {
+    "name": "Saans",
+    "nameHindi": "साँस",
+    "tagline": "Breathe smarter through smog season",
+    "subtitle": "AI and science-grounded clean air assistant for Indian urban families and communities",
+    "skipToContent": "Skip to main content",
+    "degradedBanner": "Running in Degraded / Fallback Mode. Live AI or AQI connection timed out; deterministic scientific models are active.",
+    "readAloud": "Read Aloud",
+    "readingAloud": "Reading...",
+    "stopReading": "Stop"
+  },
+  "nav": {
+    "dashboard": "Today",
+    "plan": "Action Plan",
+    "chat": "Ask Saans",
+    "community": "Community Mode",
+    "profile": "Profile",
+    "language": "Language"
+  },
+  "onboarding": {
+    "title": "Set Up Your Household Profile",
+    "subtitle": "Tailors clean air routines and impact models to your home and commute (<60s)",
+    "locationSection": "1. Location",
+    "locationPlaceholder": "Search Indian city (e.g. Delhi, Noida, Gurugram)...",
+    "useGps": "Use My Current Location",
+    "detectingGps": "Detecting...",
+    "householdSection": "2. Household Members",
+    "adults": "Adults (18-64)",
+    "children": "Children (<18)",
+    "elderly": "Elderly (65+)",
+    "sensitiveMembers": "Any member with Asthma, COPD, heart condition, or pregnancy?",
+    "sensitiveYes": "Yes (Vulnerable)",
+    "sensitiveNo": "No",
+    "lifestyleSection": "3. Lifestyle & Commute",
+    "commuteMode": "Primary Commute Mode",
+    "commuteDistance": "One-Way Commute Distance (km)",
+    "wfhDays": "Work-From-Home Days per Week",
+    "homeType": "Home Construction Type",
+    "cookingFuel": "Kitchen Cooking Fuel",
+    "hasPurifier": "Do you have a True HEPA Air Purifier at home?",
+    "saveProfile": "Save & View Dashboard",
+    "modes": {
+      "metro": "Metro Transit",
+      "bus": "Bus Transit",
+      "car_petrol": "Petrol Car",
+      "car_diesel": "Diesel Car",
+      "car_ev": "Electric Car (EV)",
+      "two_wheeler": "Two-Wheeler / Bike",
+      "auto": "Auto Rickshaw (CNG)",
+      "walk_cycle": "Walk / Cycle",
+      "none": "None (Full Remote)"
+    },
+    "homes": {
+      "apartment_highrise": "High-Rise Apartment (5+ floors)",
+      "apartment_lowrise": "Low-Rise Apartment (1-4 floors)",
+      "independent_house": "Independent House / Villa",
+      "semi_pucca": "Semi-Pucca / Naturally Ventilated"
+    },
+    "fuels": {
+      "lpg": "LPG Gas Cylinder",
+      "png": "Piped Natural Gas (PNG)",
+      "electric_induction": "Electric Induction Stove",
+      "biomass": "Biomass / Firewood / Chulha"
+    }
+  },
+  "dashboard": {
+    "liveAqiTitle": "Indian National AQI (CPCB)",
+    "dominantPollutant": "Dominant Pollutant",
+    "emergencyAlert": "PUBLIC HEALTH EMERGENCY: Severe smog episode. Avoid outdoor exertion and keep vulnerable members indoors.",
+    "whoGuideline": "times WHO 24h Guideline",
+    "pollutants": {
+      "pm25": "PM2.5 (Fine Particulates)",
+      "pm10": "PM10 (Coarse Dust)",
+      "no2": "NO2 (Nitrogen Dioxide)",
+      "o3": "Ozone (O3)"
+    },
+    "outdoorWindow": {
+      "title": "Safest Window to Step Out / Air the House",
+      "ventilationLimit": "Ventilation limit: ",
+      "minutes": "minutes",
+      "caution": "Morning and night inversion traps hazardous surface smog. Shift all outdoor tasks to midday."
+    },
+    "forecast": {
+      "title": "Next-24h Hourly AQI Forecast",
+      "chartLabel": "24-Hour PM2.5 and AQI Projection",
+      "toggleTable": "Show as Accessible Table",
+      "hideTable": "Hide Table",
+      "timeHeader": "Time",
+      "aqiHeader": "AQI",
+      "categoryHeader": "Category",
+      "pm25Header": "PM2.5 (µg/m³)"
+    }
+  },
+  "plan": {
+    "title": "Personalised Clean Air Plan",
+    "subtitle": "Routines, indoor hacks, and sustainable switches calibrated to your profile",
+    "sections": {
+      "routine": "Low-Emission Daily Routine",
+      "indoor": "Indoor Air-Quality Hacks",
+      "sustainable": "Sustainable Alternatives"
+    },
+    "effort": "Effort",
+    "cost": "Est. Cost",
+    "exposureImpact": "Exposure Impact",
+    "emissionsImpact": "Emissions Impact",
+    "communityImpact": "Community Multiplier",
+    "communityMultiplier": "Community Multiplier",
+    "sourceCitation": "Source Citation",
+    "allNumbersGrounded": "All numbers are computed by the Saans deterministic mathematical engine from verified scientific studies.",
+    "refreshPlan": "Refresh Plan"
+  },
+  "chat": {
+    "title": "Ask Saans — Smog & Clean Air Assistant",
+    "subtitle": "Grounded in real-time air quality, your household profile, and verified atmospheric science",
+    "inputPlaceholder": "Ask anything about masks, purifiers, smog routines, or myths...",
+    "send": "Send",
+    "quickPromptsTitle": "Common Smog Questions & Myth-Busters",
+    "quickPrompts": [
+      "Do cloth masks or dupattas protect against PM2.5?",
+      "Can snake plants or areca palms clean indoor air?",
+      "Should I open windows early morning to air out?",
+      "Is it safe to go for a brisk morning walk right now?",
+      "Does burning agarbatti or dhoop purify the house?"
+    ],
+    "medicalDisclaimer": "Medical Safety Notice: Saans provides air quality guidance, not medical diagnosis or prescription. For severe breathing distress or asthma emergencies, seek urgent emergency hospital care. Never discontinue prescribed inhalers or medication."
+  },
+  "community": {
+    "title": "Community Mode: Neighbourhood Action Pack",
+    "subtitle": "Scale clean-air action across your RWA, apartment society, or mohalla",
+    "householdSliderLabel": "Number of Participating Households in Your Society / RWA",
+    "aggregateImpactTitle": "90-Day Winter Smog Season Impact (If N Households Participate)",
+    "pm25Prevented": "kg PM2.5 Prevented",
+    "co2Reduced": "Tons CO2e Reduced",
+    "tripsAvoided": "Car Trips Avoided",
+    "hoursAverted": "High-Exposure Hours Averted",
+    "actionChecklistTitle": "RWA Clean Air Action Checklist",
+    "checklist": [
+      "Replace security guard wood/coal warming tins with electric radiant quartz heaters (₹1,000/gate)",
+      "Strict ban on open burning of autumn fallen dry leaves and garden waste in society premises",
+      "Coordinate weekly society carpool / metro transit groups for office and school commutes",
+      "Equip society maintenance staff with microfiber wet-mops instead of dry brooms for corridors",
+      "Seal entry lobbies and stairwell windows after 5:00 PM to prevent chimney-effect infiltration"
+    ],
+    "pledgeTitle": "Clean Air Community Pledge",
+    "pledgeText": "We, the residents of our community, pledge to adopt low-emission routines this winter smog season: avoiding open combustion, shifting to public transit and carpooling, protecting our sanitation staff and security guards with clean warmth, and keeping vulnerable children and seniors safe indoors during inversion spikes.",
+    "copyPledge": "Copy Action Pack & Pledge",
+    "copied": "Copied to Clipboard!",
+    "printPack": "Print Action Pack"
+  }
+}
