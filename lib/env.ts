@@ -16,6 +16,18 @@ const envSchema = z.object({
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
+try {
+  if (
+    typeof process !== 'undefined' &&
+    typeof process.loadEnvFile === 'function' &&
+    process.env.NODE_ENV !== 'test'
+  ) {
+    process.loadEnvFile('.env.local');
+  }
+} catch {
+  // Ignore when running in browser, test suite, build phase, or when .env.local does not exist
+}
+
 export function parseEnv(customEnv?: Record<string, unknown>): EnvConfig {
   const result = envSchema.safeParse(customEnv ?? {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,

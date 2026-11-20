@@ -5,6 +5,12 @@
  * Run with: npm run eval
  */
 
+try {
+  process.loadEnvFile?.('.env.local');
+} catch {
+  // Ignore if not present
+}
+
 import { generateDeterministicPlan } from '../lib/rules/fallback-plan';
 import { HouseholdProfile } from '../lib/impact/types';
 import { SAANS_SYSTEM_PROMPT } from '../lib/llm/prompt';
