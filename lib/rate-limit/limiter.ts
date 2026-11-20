@@ -1,13 +1,11 @@
 /**
  * @file limiter.ts
- * @description In-memory sliding-window rate limiter per client IP.
- *
- * NOTE FOR SERVERLESS / EDGE RUNTIMES:
- * In-memory state is isolated per serverless instance and ephemeral.
- * For distributed production deployments across multi-region serverless clusters,
- * an external key-value store (such as Upstash Redis) is recommended.
- * Documented in DECISIONS.md.
+ * @description Rate limiter abstraction with two implementations:
+ * 1. InMemoryRateLimiter (local sliding-window token bucket)
+ * 2. UpstashRedisRateLimiter (distributed REST client with in-memory fallback)
  */
+
+import { env } from '../env';
 
 export interface RateLimitResult {
   readonly success: boolean;
@@ -17,35 +15,31 @@ export interface RateLimitResult {
   readonly retryAfterSeconds?: number;
 }
 
+export interface RateLimiter {
+  check(key: string, now?: number): Promise<RateLimitResult> | RateLimitResult;
+}
+
 interface WindowRecord {
   count: number;
   resetTime: number;
 }
 
-export class SlidingWindowRateLimiter {
+/**
+ * In-memory sliding-window token bucket implementation.
+ */
+export class InMemoryRateLimiter implements RateLimiter {
   private readonly store = new Map<string, WindowRecord>();
   private readonly limit: number;
   private readonly windowMs: number;
 
-  /**
-   * @param limit Max allowed requests per window
-   * @param windowMs Window duration in milliseconds (default: 60,000 ms = 1 min)
-   */
   constructor(limit = 60, windowMs = 60_000) {
     this.limit = limit;
     this.windowMs = windowMs;
   }
 
-  /**
-   * Checks and consumes a token for the given client identifier.
-   *
-   * @param key Client IP or session key
-   * @param now Optional timestamp (for deterministic unit testing)
-   * @returns RateLimitResult
-   */
   public check(key: string, now: number = Date.now()): RateLimitResult {
-    // Clean up expired entries periodically
-    if (this.store.size > 5000) {
+    // Evict expired records periodically
+    if (this.store.size > 2000) {
       for (const [k, v] of this.store.entries()) {
         if (v.resetTime <= now) {
           this.store.delete(k);
@@ -54,9 +48,7 @@ export class SlidingWindowRateLimiter {
     }
 
     const record = this.store.get(key);
-
     if (!record || record.resetTime <= now) {
-      // New or expired window
       const resetTime = now + this.windowMs;
       this.store.set(key, { count: 1, resetTime });
       return {
@@ -67,34 +59,116 @@ export class SlidingWindowRateLimiter {
       };
     }
 
-    if (record.count < this.limit) {
-      record.count += 1;
+    if (record.count >= this.limit) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((record.resetTime - now) / 1000));
       return {
-        success: true,
+        success: false,
         limit: this.limit,
-        remaining: this.limit - record.count,
+        remaining: 0,
         reset: Math.ceil(record.resetTime / 1000),
+        retryAfterSeconds,
       };
     }
 
-    // Exceeded limit
-    const retryAfterSeconds = Math.max(1, Math.ceil((record.resetTime - now) / 1000));
+    record.count += 1;
     return {
-      success: false,
+      success: true,
       limit: this.limit,
-      remaining: 0,
+      remaining: this.limit - record.count,
       reset: Math.ceil(record.resetTime / 1000),
-      retryAfterSeconds,
     };
   }
 
-  /**
-   * Resets all stored limits (for unit testing).
-   */
-  public reset(): void {
+  public resetAll(): void {
     this.store.clear();
   }
 }
 
-// Global default limiter instance
-export const globalRateLimiter = new SlidingWindowRateLimiter(60, 60_000);
+// Backward compatibility alias
+export const SlidingWindowRateLimiter = InMemoryRateLimiter;
+
+/**
+ * Upstash Redis distributed rate limiter using the HTTP REST pipeline.
+ * Falls back to InMemoryRateLimiter if Upstash is unreachable or returns 5xx.
+ */
+export class UpstashRedisRateLimiter implements RateLimiter {
+  private readonly fallback: InMemoryRateLimiter;
+  private readonly url?: string;
+  private readonly token?: string;
+  private readonly limit: number;
+  private readonly windowSeconds: number;
+
+  constructor(url?: string, token?: string, limit = 60, windowSeconds = 60) {
+    this.url = url;
+    this.token = token;
+    this.limit = limit;
+    this.windowSeconds = windowSeconds;
+    this.fallback = new InMemoryRateLimiter(limit, windowSeconds * 1000);
+  }
+
+  public async check(key: string, now: number = Date.now()): Promise<RateLimitResult> {
+    if (!this.url || !this.token) {
+      return this.fallback.check(key, now);
+    }
+
+    try {
+      const redisKey = `saans_rate:${key}:${Math.floor(now / (this.windowSeconds * 1000))}`;
+      const response = await fetch(`${this.url}/pipeline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([
+          ['INCR', redisKey],
+          ['EXPIRE', redisKey, this.windowSeconds * 2],
+        ]),
+      });
+
+      if (!response.ok) {
+        return this.fallback.check(key, now);
+      }
+
+      const results = (await response.json()) as Array<{ result: number }>;
+      const count = Number(results[0]?.result ?? 1);
+      const resetTime = now + this.windowSeconds * 1000;
+
+      if (count > this.limit) {
+        const retryAfterSeconds = Math.max(1, Math.ceil((resetTime - now) / 1000));
+        return {
+          success: false,
+          limit: this.limit,
+          remaining: 0,
+          reset: Math.ceil(resetTime / 1000),
+          retryAfterSeconds,
+        };
+      }
+
+      return {
+        success: true,
+        limit: this.limit,
+        remaining: Math.max(0, this.limit - count),
+        reset: Math.ceil(resetTime / 1000),
+      };
+    } catch {
+      // Upstream network failure -> fail open with local in-memory fallback
+      return this.fallback.check(key, now);
+    }
+  }
+}
+
+/**
+ * Factory function creating the best available RateLimiter based on environment config.
+ */
+export function createRateLimiter(limit?: number): RateLimiter {
+  const maxReq = limit ?? env.RATE_LIMIT_PER_MINUTE;
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    return new UpstashRedisRateLimiter(
+      env.UPSTASH_REDIS_REST_URL,
+      env.UPSTASH_REDIS_REST_TOKEN,
+      maxReq,
+      60
+    );
+  }
+  return new InMemoryRateLimiter(maxReq, 60_000);
+}

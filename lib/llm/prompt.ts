@@ -77,6 +77,19 @@ Is Public Health Emergency: ${aqiData.isEmergency ? 'YES' : 'NO'}
 /**
  * Builds chat context for streaming conversation with delimiter sandbox.
  */
+/**
+ * Builds isolated user chat prompt enclosing question within explicit untrusted delimiters.
+ */
+export function buildChatUserPrompt(
+  userQuestion: string,
+  profile: HouseholdProfile,
+  aqiData: ComputedAQIResult,
+  language: 'en' | 'hi'
+): string {
+  const grounding = buildChatPrompt(profile, aqiData.aqi, aqiData.dominantPollutant, language);
+  return `${grounding}\n\n<untrusted_user_question>\n${userQuestion}\n</untrusted_user_question>`;
+}
+
 export function buildChatPrompt(
   profile: HouseholdProfile,
   aqi: number,

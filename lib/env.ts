@@ -10,6 +10,8 @@ const envSchema = z.object({
   GEMINI_MODEL: z.string().default('gemini-2.0-flash'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().min(1).max(1000).default(60),
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -20,6 +22,8 @@ export function parseEnv(customEnv?: Record<string, unknown>): EnvConfig {
     GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
     NODE_ENV: process.env.NODE_ENV,
     RATE_LIMIT_PER_MINUTE: process.env.RATE_LIMIT_PER_MINUTE,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   });
 
   if (!result.success) {

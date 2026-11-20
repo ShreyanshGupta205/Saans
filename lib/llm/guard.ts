@@ -8,13 +8,20 @@
  */
 
 const SUSPICIOUS_PATTERNS = [
-  /ignore (all )?(previous|prior) instructions/i,
+  /\bignore\b/i,
   /system prompt/i,
   /you are a large language model/i,
   /jailbreak/i,
   /bypass safety/i,
+  /system instruction override/i,
+  /developer mode/i,
+  /print instructions/i,
+  /repeat every word/i,
+  /output secret/i,
+  /<![\s\S]*?>/, // HTML comments & CDATA
   /<script[\s\S]*?>/i,
   /<iframe[\s\S]*?>/i,
+  /<img[\s\S]*?>/i,
   /javascript:/i,
   /on\w+\s*=/i,
 ];
@@ -35,8 +42,8 @@ export function validateLLMOutputSafety(text: string): boolean {
     return false;
   }
 
-  // Reject HTML tags
-  if (/<[a-zA-Z/][\s\S]*?>/.test(text)) {
+  // Reject HTML tags and comments
+  if (/<(!|[a-zA-Z/])[\s\S]*?>/.test(text)) {
     return false;
   }
 
