@@ -13,17 +13,20 @@ import { calculateCommunityImpact } from '../impact/community';
 import { calculateHouseholdEmissions } from '../impact/emissions';
 import { calculateHouseholdExposure } from '../impact/exposure';
 import { ActionCardData, ActionCardImpact, HouseholdProfile } from '../impact/types';
+import { getProfileArchetype } from '../impact/archetypes';
 import { generateDeterministicPlan, GeneratedPlanResult } from '../rules/fallback-plan';
-import { getGeminiModelName, getGenAIClient } from './client';
+import { getGeminiModelName, getGenAIClient, GEMINI_SAFETY_SETTINGS } from './client';
 import { buildPlanUserPrompt, SAANS_SYSTEM_PROMPT } from './prompt';
 import { LLMPlanResponse, LLMPlanResponseSchema } from './schema';
+import { validateLLMOutputSafety } from './guard';
 import { IMPACT_FACTORS } from '../../data/impact-factors';
 
 /**
- * In-memory plan cache keyed by hash of (AQI bucket, rounded profile, language)
+ * In-memory plan narrative cache keyed by (AQI bucket, profileArchetype, language)
+ * Maximum 144 discrete key combinations (6 aqi buckets * 12 archetypes * 2 languages)
  */
 const planCache = new Map<string, { plan: GeneratedPlanResult; expiresAt: number }>();
-const PLAN_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const PLAN_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes for high cache hit rate
 
 /**
  * Clears the in-memory plan cache (for testing)
@@ -33,7 +36,8 @@ export function clearPlanCache(): void {
 }
 
 function getPlanCacheKey(profile: HouseholdProfile, aqiCategory: string, lang: string): string {
-  return `${aqiCategory}_${profile.homeType}_${profile.cookingFuel}_${profile.hasAirPurifier}_${profile.hasSensitiveMembers}_${profile.commuteMode}_${lang}`;
+  const archetype = getProfileArchetype(profile);
+  return `${aqiCategory.toLowerCase()}_${archetype}_${lang}`;
 }
 
 /**
@@ -240,7 +244,7 @@ export async function getOrGeneratePlan(
   profile: HouseholdProfile,
   aqiData: ComputedAQIResult,
   language: 'en' | 'hi' = 'en',
-  timeoutMs = 12000
+  timeoutMs = 8000
 ): Promise<GeneratedPlanResult> {
   const cacheKey = getPlanCacheKey(profile, aqiData.category, language);
   const now = Date.now();
@@ -285,14 +289,16 @@ export async function getOrGeneratePlan(
         responseMimeType: 'application/json',
         maxOutputTokens: 2048,
         temperature: 0.2,
+        // @ts-expect-error safetySettings typed loosely in client
+        safetySettings: GEMINI_SAFETY_SETTINGS,
       },
     });
 
     clearTimeout(timeoutId);
 
     const rawText = response.text;
-    if (!rawText) {
-      throw new Error('Gemini returned empty text response');
+    if (!rawText || !validateLLMOutputSafety(rawText)) {
+      throw new Error('Gemini output empty or rejected by safety guard');
     }
 
     const parsedJson = JSON.parse(rawText);
