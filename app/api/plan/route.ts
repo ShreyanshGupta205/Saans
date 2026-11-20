@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { ComputedAQIResult } from '@/lib/aqi/types';
 import { HouseholdProfileSchema } from '@/lib/llm/schema';
 import { getOrGeneratePlan } from '@/lib/llm/service';
-import { globalRateLimiter } from '@/lib/rate-limit/limiter';
+import { enforceRateLimit } from '@/lib/rate-limit/helpers';
 
 const PlanRequestSchema = z
   .object({
@@ -19,26 +19,8 @@ const PlanRequestSchema = z
   .strict();
 
 export async function POST(request: NextRequest) {
-  // 1. IP Rate Limiting
-  const clientIp =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    '127.0.0.1';
-
-  const rateCheck = await globalRateLimiter.check(clientIp);
-  if (!rateCheck.success) {
-    return NextResponse.json(
-      { error: 'Rate limit exceeded. Please wait before retrying.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(rateCheck.retryAfterSeconds ?? 60),
-          'X-RateLimit-Limit': String(rateCheck.limit),
-          'X-RateLimit-Remaining': '0',
-        },
-      }
-    );
-  }
+  const rateLimitResponse = await enforceRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
 
   try {
     const body: unknown = await request.json();
@@ -58,11 +40,7 @@ export async function POST(request: NextRequest) {
       { plan, isBasicMode: plan.isDegraded },
       {
         status: 200,
-        headers: {
-          'X-RateLimit-Limit': String(rateCheck.limit),
-          'X-RateLimit-Remaining': String(rateCheck.remaining),
-          'X-Plan-Mode': plan.isDegraded ? 'basic' : 'personalized',
-        },
+        headers: { 'X-Plan-Mode': plan.isDegraded ? 'basic' : 'personalized' },
       }
     );
   } catch (err) {

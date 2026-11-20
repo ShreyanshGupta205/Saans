@@ -51,4 +51,4 @@ Saans handles public air quality awareness, household lifestyle profiles, and co
 ---
 
 ## 3. Reporting Vulnerabilities
-If you identify a security vulnerability in Saans, please report it via private security advisory or contact the maintainers directly. Do not open public issues for zero-day vulnerabilities.
+If you identify a security vulnerability in Saans, please report it via private security advisory on GitHub or email security@saans.org. Do not open public issues for zero-day vulnerabilities. All vulnerabilities are acknowledged within 24 hours.

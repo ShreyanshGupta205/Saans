@@ -4,89 +4,77 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { POPULAR_INDIAN_LOCATIONS } from '@/data/locations';
-import { searchOpenMeteoLocations } from '@/lib/data/open-meteo';
+import { POPULAR_INDIAN_LOCATIONS, IndianLocation } from '@/data/locations';
+import { searchOpenMeteoLocations, GeocodingResult } from '@/lib/data/open-meteo';
 import { GeocodeQuerySchema } from '@/lib/llm/schema';
-import { globalRateLimiter } from '@/lib/rate-limit/limiter';
+import { enforceRateLimit } from '@/lib/rate-limit/helpers';
 
-export async function GET(request: NextRequest) {
-  // 1. IP Rate Limiting
-  const clientIp =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    '127.0.0.1';
+interface MergedLocation {
+  id: string;
+  name: string;
+  nameHi?: string;
+  admin1: string;
+  latitude: number;
+  longitude: number;
+  isNCR: boolean;
+}
 
-  const rateCheck = await globalRateLimiter.check(clientIp);
-  if (!rateCheck.success) {
-    return NextResponse.json(
-      { error: 'Rate limit exceeded. Please wait before retrying.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(rateCheck.retryAfterSeconds ?? 60),
-        },
-      }
-    );
+function mergeLocations(local: IndianLocation[], remote: GeocodingResult[]): MergedLocation[] {
+  const combined: MergedLocation[] = [
+    ...local.map((l) => ({
+      id: l.id,
+      name: l.nameEn,
+      nameHi: l.nameHi,
+      admin1: l.stateEn,
+      latitude: l.lat,
+      longitude: l.lon,
+      isNCR: l.isNCR,
+    })),
+    ...remote.map((r) => ({
+      id: String(r.id),
+      name: r.name,
+      admin1: r.admin1 || 'India',
+      latitude: r.latitude,
+      longitude: r.longitude,
+      isNCR: false,
+    })),
+  ];
+
+  const uniqueMap = new Map<string, MergedLocation>();
+  for (const item of combined) {
+    const key = `${item.latitude.toFixed(1)}_${item.longitude.toFixed(1)}`;
+    if (!uniqueMap.has(key)) uniqueMap.set(key, item);
   }
+  return Array.from(uniqueMap.values()).slice(0, 10);
+}
 
-  const { searchParams } = new URL(request.url);
-  const parseResult = GeocodeQuerySchema.safeParse({
-    q: searchParams.get('q'),
-  });
-
-  if (!parseResult.success) {
-    // Return top curated Indian locations if no query
-    return NextResponse.json({ locations: POPULAR_INDIAN_LOCATIONS });
-  }
-
-  const query = parseResult.data.q.toLowerCase().trim();
-
-  // Search curated popular locations first
-  const localMatches = POPULAR_INDIAN_LOCATIONS.filter(
+function findLocalMatches(query: string): IndianLocation[] {
+  return POPULAR_INDIAN_LOCATIONS.filter(
     (loc) =>
       loc.nameEn.toLowerCase().includes(query) ||
       loc.nameHi.includes(query) ||
       loc.stateEn.toLowerCase().includes(query)
   );
+}
+
+export async function GET(request: NextRequest) {
+  const rateLimitResponse = await enforceRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const { searchParams } = new URL(request.url);
+  const parseResult = GeocodeQuerySchema.safeParse({ q: searchParams.get('q') });
+
+  if (!parseResult.success) {
+    return NextResponse.json({ locations: POPULAR_INDIAN_LOCATIONS });
+  }
+
+  const query = parseResult.data.q.toLowerCase().trim();
+  const localMatches = findLocalMatches(query);
 
   try {
     const remoteResults = await searchOpenMeteoLocations(query);
-    const combined = [
-      ...localMatches.map((l) => ({
-        id: l.id,
-        name: l.nameEn,
-        nameHi: l.nameHi,
-        admin1: l.stateEn,
-        latitude: l.lat,
-        longitude: l.lon,
-        isNCR: l.isNCR,
-      })),
-      ...remoteResults.map((r) => ({
-        id: String(r.id),
-        name: r.name,
-        admin1: r.admin1 || 'India',
-        latitude: r.latitude,
-        longitude: r.longitude,
-        isNCR: false,
-      })),
-    ];
-
-    // Deduplicate by close lat/lon
-    const uniqueMap = new Map<string, (typeof combined)[0]>();
-    for (const item of combined) {
-      const key = `${item.latitude.toFixed(1)}_${item.longitude.toFixed(1)}`;
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, item);
-      }
-    }
-
-    return NextResponse.json({
-      locations: Array.from(uniqueMap.values()).slice(0, 10),
-    });
+    return NextResponse.json({ locations: mergeLocations(localMatches, remoteResults) });
   } catch {
-    // Fall back to local matches
-    return NextResponse.json({
-      locations: localMatches,
-    });
+    return NextResponse.json({ locations: localMatches });
   }
 }

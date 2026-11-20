@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
   // CSP: allow Next.js client bundle scripts and styles
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''};
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''};
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self' data:;

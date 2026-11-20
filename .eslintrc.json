@@ -40,7 +40,7 @@
   },
   "overrides": [
     {
-      "files": ["components/**/*.{ts,tsx}", "app/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "data/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}"],
+      "files": ["tests/**/*.{ts,tsx}", "data/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}"],
       "rules": {
         "complexity": "off",
         "sonarjs/cognitive-complexity": "off",
