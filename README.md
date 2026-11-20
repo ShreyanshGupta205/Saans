@@ -19,9 +19,10 @@
 | **Lighthouse Best Practices** | $\ge 95$ | **100 / 100** | Strict CSP Nonce + HTTPS + HSTS audit | **PASS** |
 | **Lighthouse SEO** | $\ge 95$ | **100 / 100** | Meta tags, semantic HTML, bilingual alternates | **PASS** |
 | **axe-core Accessibility** | 0 violations | **0 violations** | `@axe-core/playwright` on all desktop & mobile routes | **PASS** |
-| **Unit & Integration Coverage**| $\ge 90\%$ lib | **98.93% Stmts (98.93% Lines)** | Vitest v8 coverage across 19 suites (119/119 tests) | **PASS** |
+| **Unit & Integration Coverage**| $\ge 90\%$ lib | **98.69% Stmts (98.69% Lines)** | Vitest v8 coverage across 19 suites (121/121 tests passing) | **PASS** |
 | **Type Coverage** | $\ge 99\%$ | **99.42% (13,470 / 13,548)** | `type-coverage --at-least 99` | **PASS** |
-| **Architectural Boundaries** | 0 violations | **0 violations (23 modules)** | `depcruise` (lib/ never imports components/ or app/) | **PASS** |
+| **Architectural Boundaries** | 0 violations | **0 violations (25 modules)** | `depcruise` (lib/ never imports components/ or app/) | **PASS** |
+| **Dead Code & Exports** | 0 unused | **0 unused exports, 0 unused deps** | `knip` comprehensive unused code detection | **PASS** |
 | **Mutation Testing Score** | $\ge 80\%$ | **Configured ($\ge 80\%$)** | Stryker mutation testing (`lib/aqi`, `lib/impact`, `lib/rules`) | **PASS** |
 | **ESLint & Code Quality** | 0 warnings | **0 errors, 0 warnings** | SonarJS + Security plugin, cyclomatic $\le 10$, lines $\le 40$ | **PASS** |
 | **Prompt Injection Corpus** | Zero bypasses | **22 hostile attacks blocked** | `tests/unit/injection-corpus.test.ts` | **PASS** |
@@ -34,7 +35,7 @@ Every phrase of the core challenge maps directly to an audited architectural mod
 
 | Challenge Phrase | What Saans Delivers | Architectural Component | Verification & Evidence |
 | :--- | :--- | :--- | :--- |
-| **"GenAI-powered assistant"** | Two-layer plan generation with Gemini 2.0 Flash narrative streaming, grounded by live AQI, profile archetypes, and safety sandboxing. | `lib/llm/service.ts`, `lib/llm/client.ts`, `components/PersonalisedPlan.tsx` | Fallback to deterministic rules if Gemini exceeds 8s timeout or rate limits. |
+| **"GenAI-powered assistant"** | Two-layer plan generation with Gemini 2.5 Flash narrative streaming, grounded by live AQI, profile archetypes, and safety sandboxing. | `lib/llm/service.ts`, `lib/llm/client.ts`, `components/PersonalisedPlan.tsx` | Fallback to deterministic rules if Gemini exceeds 8s timeout or rate limits. |
 | **"navigate severe winter smog"** | Real-time CPCB NAQI calculation with breakpoint math, WHO 2021 multiples, hourly forecast chart, and optimal ventilation timing window. | `lib/aqi/cpcb.ts`, `lib/aqi/who.ts`, `lib/aqi/forecast.ts`, `components/TodayDashboard.tsx` | Evaluated against CPCB NAQI Oct 2014 report and WHO 2021 guidelines. |
 | **"low-emission daily routines"** | Tailored Morning/Day/Evening schedules avoiding thermal inversion spikes and minimizing commute exposure. | `lib/rules/fallback-plan.ts`, `lib/rules/two-layer-plan.ts` | Activity-weighted inhalation volume modeling ($M_{\text{activity}}$). |
 | **"indoor air quality hacks"** | Practical, low-cost indoor interventions: wet mopping, exhaust damper sealing, DIY air cleaner placement, and weatherstripping. | `data/impact-factors.ts`, `lib/impact/exposure.ts` | Infiltration factor ($F_{\text{infil}}$) calculations from peer-reviewed CEEW studies. |
@@ -124,7 +125,7 @@ Configure `.env.local`:
 ```env
 # Optional for full GenAI features. If unset, Saans operates in 100% deterministic rule mode.
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-2.5-flash
 
 # Environment
 NODE_ENV=development
